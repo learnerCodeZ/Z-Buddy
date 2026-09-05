@@ -1,0 +1,25 @@
+# Dependencies / build
+node_modules/
+dist/
+build/
+out/
+target/
+
+# Env & secrets
+.env
+.env.*
+*.key
+
+# Logs & temp
+*.log
+tmp/
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
