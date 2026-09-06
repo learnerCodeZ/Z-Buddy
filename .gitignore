@@ -32,3 +32,6 @@ lab/tauri-demo/src-tauri/target/
 # App build artifacts
 app/node_modules/
 app/src-tauri/target/
+
+# 本地资料（调研报告/阶段笔记）：不入库
+local/
