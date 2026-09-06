@@ -38,6 +38,13 @@
 3. **Cargo feature 补齐**：`protocol-asset`（资产协议必需）+ `tray-icon`；
 4. 教训记录：① tauri dev 守护进程会因应用被外部杀死而退出，且两个 dev 实例会互相等构建锁假死——重启用 `taskkill` 清干净 node 链再起；② tauri.conf 的字段名以构建报错列出的合法字段为准（`focus`≠`focused`）。
 
+## 0.9 发布形态：独立 exe + 开机自启（同日追加）
+
+1. **Release 构建**：`npx tauri build` → `target/release/z-buddy-app.exe` **4.2MB 单文件**（release + LTO + strip；dev 态几十 MB 的进程瘦到 25MB 运行内存）；
+2. **脱离开发环境**：exe 复制到 `~/.z-buddy/bin/` 稳定位置，`Start-Process` 独立启动验证通过——桌宠不再依赖 Node/Rust/tauri dev 存活；
+3. **开机自启**：启动文件夹快捷方式 `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Z-Buddy.lnk` → 指向 `~/.z-buddy/bin/z-buddy-app.exe`（删除该文件即关闭自启）；
+4. **遗留**：安装包（MSI/NSIS）构建失败——WiX 工具从 GitHub 下载超时（需 Clash 开着重跑 `npx tauri build` 的 bundle 步骤）；exe 本体不受影响。
+
 ### 新增待查异常：「幽灵暂停」
 
 一次应用重启后 pause 文件被莫名置位（09:17:42，唯一写入者是前端 click→set_pause，但重启后无人点击）。怀疑 WebView 在光标停留位置合成幽灵点击。已加 `set_pause` 日志埋点，下次复现可定位。**影响有限**（最坏情况：宠物显示已暂停，再点一下即恢复）。
