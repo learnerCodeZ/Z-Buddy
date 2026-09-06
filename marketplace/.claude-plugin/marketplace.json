@@ -1,0 +1,26 @@
+{
+  "name": "z-buddy-local",
+  "description": "Z-Buddy local dev marketplace: install the z-buddy plugin from this folder during development.",
+  "description_i18n": {
+    "en": "Z-Buddy local dev marketplace.",
+    "zh-CN": "Z-Buddy 本地开发市场：开发期从本文件夹安装 z-buddy 插件。"
+  },
+  "owner": {
+    "name": "learnerCodeZ"
+  },
+  "plugins": [
+    {
+      "name": "z-buddy",
+      "source": "./z-buddy",
+      "description": "ZCode desktop pet bridge: agent lifecycle reporting + pet pause button.",
+      "description_i18n": {
+        "en": "ZCode desktop pet bridge: agent lifecycle reporting + pet pause button.",
+        "zh-CN": "ZCode 桌宠桥接：Agent 生命周期上报 + 点桌宠暂停。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "learnerCodeZ"
+      }
+    }
+  ]
+}

@@ -28,3 +28,7 @@ desktop.ini
 lab/electron-demo/node_modules/
 lab/tauri-demo/node_modules/
 lab/tauri-demo/src-tauri/target/
+
+# App build artifacts
+app/node_modules/
+app/src-tauri/target/

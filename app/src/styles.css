@@ -1,0 +1,150 @@
+/* Z-Buddy 桌宠样式与六态动画 */
+:root {
+  --pet-bg: #ff9f43;
+  --pet-shadow: #ff9f4366;
+}
+
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+#wrap {
+  position: relative;
+  width: 160px;
+  height: 300px;
+}
+
+/* ---- 宠物本体 ---- */
+#pet {
+  position: absolute;
+  left: 25px;
+  top: 165px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #ffc078, var(--pet-bg));
+  box-shadow: 0 6px 24px var(--pet-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 52px;
+  user-select: none;
+  cursor: grab;
+  transition: filter 0.3s;
+}
+#pet:active {
+  cursor: grabbing;
+}
+#pet-face {
+  pointer-events: none;
+}
+
+/* 暂停角标 */
+#pause-badge {
+  display: none;
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #2f3542;
+  color: #fff;
+  font-size: 15px;
+  line-height: 30px;
+  text-align: center;
+  box-shadow: 0 2px 8px #0006;
+}
+
+/* ---- 六态动画 ---- */
+#pet.idle {
+  animation: breathe 3s ease-in-out infinite;
+}
+#pet.thinking {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+#pet.working {
+  animation: bounce 0.5s ease-in-out infinite;
+}
+#pet.permission {
+  animation: bounce 0.5s ease-in-out infinite;
+  outline: 4px solid #ffd32a;
+  outline-offset: 3px;
+}
+#pet.error {
+  animation: shake 0.4s ease-in-out 3;
+}
+#pet.sleep {
+  filter: grayscale(0.7) brightness(0.8);
+  animation: breathe 5s ease-in-out infinite;
+}
+#pet.paused-ui {
+  filter: grayscale(0.9) brightness(0.75);
+}
+#pet.paused-ui #pause-badge {
+  display: block;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12) rotate(-4deg); }
+}
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* ---- 悬停信息卡 ---- */
+#card {
+  position: absolute;
+  bottom: 138px;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  min-width: 168px;
+  max-width: 230px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #2f3542ee;
+  color: #f5f6fa;
+  font-size: 12px;
+  line-height: 1.55;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s, transform 0.18s;
+  box-shadow: 0 8px 24px #0007;
+}
+#wrap:hover #card {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+#card-title {
+  font-weight: 600;
+  font-size: 12px;
+  color: #ffa502;
+  margin-bottom: 2px;
+}
+#card-status {
+  font-weight: 700;
+  font-size: 14px;
+}
+#card-detail {
+  color: #dcdde1;
+  word-break: break-all;
+}
+#card-hint {
+  margin-top: 4px;
+  color: #808e9b;
+  font-size: 11px;
+}
