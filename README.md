@@ -54,6 +54,8 @@
 └──────────────────────────┘         └──────────────────────────────┘
 ```
 
+> 📐 插件侧目录结构**完全遵循 ZCode 官方模板插件 [Example Plugin](https://github.com/zai-org/zcode-plugins) 的推荐布局**（`.zcode-plugin/plugin.json` manifest + `hooks/hooks.json` + Skills + MCP 预留位），与官方插件市场规范保持一致，为上架做好准备。
+
 ## 路线图
 
 - **Phase 0 · 技术验证**（当前阶段）：hooks 事件流实测、打断行为实验、暂停机制原型、Electron/Tauri 选型对拼
