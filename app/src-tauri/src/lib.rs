@@ -33,6 +33,7 @@ fn read_state() -> String {
 /// 点桌宠 = 暂停/恢复：写/删 pause 文件，由插件 PreToolUse hook 强制执行
 #[tauri::command]
 fn set_pause(on: bool) -> bool {
+    println!("[z-buddy] set_pause({}) invoked", on); // 诊断埋点：排查重启时的幽灵点击
     let dir = z_buddy_dir();
     let p = dir.join("pause");
     if on {
@@ -44,6 +45,25 @@ fn set_pause(on: bool) -> bool {
             Err(_) => !p.exists(),
         }
     }
+}
+
+/// 点击穿透守护：光标不在宠物本体（交互区）时，把窗口设为穿透，
+/// 避免上方透明区域（悬停卡预留区）挡住身后内容的点击。
+/// MVP 交互区 = 宠物本体矩形（CSS 空间 10..150 x, 155..295 y）；
+/// 悬停卡暂不含在内（卡片纯展示）。
+fn spawn_clickthrough(app: tauri::AppHandle) {
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        let Some(win) = app.get_webview_window("main") else { continue };
+        let Ok(cur) = app.cursor_position() else { continue };
+        let Ok(wpos) = win.outer_position() else { continue };
+        let Ok(wsize) = win.outer_size() else { continue };
+        let scale = win.scale_factor().unwrap_or(1.0);
+        let lx = (cur.x - wpos.x as f64) / scale;
+        let ly = (cur.y - wpos.y as f64) / scale;
+        let interactive = lx >= 10.0 && lx <= 150.0 && ly >= 155.0 && ly <= 295.0;
+        let _ = win.set_ignore_cursor_events(!interactive);
+    });
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -64,6 +84,7 @@ pub fn run() {
                     ));
                 }
             }
+            spawn_clickthrough(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())

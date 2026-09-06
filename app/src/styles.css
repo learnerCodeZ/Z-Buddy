@@ -1,9 +1,4 @@
-/* Z-Buddy 桌宠样式与六态动画 */
-:root {
-  --pet-bg: #ff9f43;
-  --pet-shadow: #ff9f4366;
-}
-
+/* Z-Buddy 桌宠样式：精灵图渲染 + 六态 + 悬停卡 */
 body {
   margin: 0;
   background: transparent;
@@ -17,28 +12,24 @@ body {
   height: 300px;
 }
 
-/* ---- 宠物本体 ---- */
+/* ---- 宠物本体（精灵图画布）---- */
 #pet {
   position: absolute;
-  left: 25px;
-  top: 165px;
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #ffc078, var(--pet-bg));
-  box-shadow: 0 6px 24px var(--pet-shadow);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 52px;
+  left: 16px;
+  top: 159px;
+  width: 128px;
+  height: 128px;
   user-select: none;
   cursor: grab;
-  transition: filter 0.3s;
 }
 #pet:active {
   cursor: grabbing;
 }
-#pet-face {
+#pet-canvas {
+  width: 128px;
+  height: 128px;
+  image-rendering: pixelated;
+  transition: filter 0.3s;
   pointer-events: none;
 }
 
@@ -46,8 +37,8 @@ body {
 #pause-badge {
   display: none;
   position: absolute;
-  right: 2px;
-  top: 2px;
+  right: 4px;
+  top: 6px;
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -59,57 +50,33 @@ body {
   box-shadow: 0 2px 8px #0006;
 }
 
-/* ---- 六态动画 ---- */
-#pet.idle {
-  animation: breathe 3s ease-in-out infinite;
+/* ---- 状态修饰 ---- */
+#pet.working #pet-canvas {
+  animation: hop 0.5s ease-in-out infinite;
 }
-#pet.thinking {
-  animation: pulse 1.2s ease-in-out infinite;
+#pet.permission #pet-canvas {
+  animation: hop 0.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px #ffd32a);
 }
-#pet.working {
-  animation: bounce 0.5s ease-in-out infinite;
+#pet.sleep #pet-canvas {
+  filter: grayscale(0.6) brightness(0.85);
 }
-#pet.permission {
-  animation: bounce 0.5s ease-in-out infinite;
-  outline: 4px solid #ffd32a;
-  outline-offset: 3px;
-}
-#pet.error {
-  animation: shake 0.4s ease-in-out 3;
-}
-#pet.sleep {
-  filter: grayscale(0.7) brightness(0.8);
-  animation: breathe 5s ease-in-out infinite;
-}
-#pet.paused-ui {
+#pet.paused-ui #pet-canvas {
   filter: grayscale(0.9) brightness(0.75);
 }
 #pet.paused-ui #pause-badge {
   display: block;
 }
 
-@keyframes breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.06); }
-}
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.12) rotate(-4deg); }
-}
-@keyframes bounce {
+@keyframes hop {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-9px); }
-}
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+  50% { transform: translateY(-6px); }
 }
 
 /* ---- 悬停信息卡 ---- */
 #card {
   position: absolute;
-  bottom: 138px;
+  bottom: 150px;
   left: 50%;
   transform: translateX(-50%) translateY(6px);
   min-width: 168px;
