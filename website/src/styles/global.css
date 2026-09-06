@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  /* 对齐 ZCode 官网的设计 token（2026-09-06 CSS 实测提取） */
+  --color-zblue: #0071e3;
+  --color-zblue-hover: #0077ed;
+  --color-ink: #1d1d1f;
+  --color-ink-2: #86868b;
+  --color-mist: #f5f5f7;
+  --color-mist-2: #fafafa;
+  --color-hairline: rgba(0, 0, 0, 0.1);
+  --color-grad-a: #ac4bff;
+  --color-grad-b: #f6339a;
+  --color-ok: #34c759;
+  --color-warn: #f99c00;
+  --color-sky-panel: #082032;
+
+  --font-sans: "Geist Sans", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 rounded-full bg-zblue px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zblue-hover;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 rounded-full border border-hairline bg-white px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-mist;
+  }
+  .card {
+    @apply rounded-2xl border border-hairline bg-white p-6;
+  }
+  .grad-text {
+    background: linear-gradient(90deg, var(--color-grad-a), var(--color-grad-b));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* hero 深色玻璃拟态面板（对齐 ZCode .hero-visual-theme） */
+  .glass-panel {
+    background: color-mix(in oklab, var(--color-sky-panel) 88%, transparent);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .pixelated {
+    image-rendering: pixelated;
+  }
+  .section-title {
+    @apply text-3xl font-bold tracking-tight text-ink sm:text-4xl;
+  }
+  .section-sub {
+    @apply mt-3 text-base leading-relaxed text-ink-2 sm:text-lg;
+  }
+}

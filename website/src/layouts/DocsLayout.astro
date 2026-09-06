@@ -1,0 +1,69 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { SITE, withBase } from '../data/site';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description } = Astro.props;
+const bp = import.meta.env.BASE_URL;
+
+const links = [
+  { href: `${bp}/docs/quick-start/`, label: '快速开始' },
+  { href: `${bp}/docs/faq/`, label: 'FAQ / 故障排查' },
+];
+const soon = ['安装指南', '使用指南', '宠物包规范 v1', '架构与隐私'];
+---
+
+<BaseLayout title={`${title} · ${SITE.name}`} description={description}>
+  <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+    <div class="grid gap-10 md:grid-cols-[200px_1fr]">
+      <!-- 侧边栏 -->
+      <aside class="md:border-r md:border-hairline md:pr-6">
+        <p class="text-sm font-semibold">文档</p>
+        <nav class="mt-3 flex flex-row flex-wrap gap-x-4 gap-y-2 text-sm md:flex-col md:flex-nowrap">
+          {links.map((l) => (
+            <a href={l.href} class:list={['rounded-md px-2 py-1 -mx-2', Astro.url.pathname === l.href || (Astro.url.pathname + '/') === l.href ? 'bg-mist font-medium text-ink' : 'text-ink-2 hover:text-ink']}>
+              {l.label}
+            </a>
+          ))}
+          {soon.map((s) => (
+            <span class="cursor-not-allowed px-2 py-1 -mx-2 text-ink-2/50" title="撰写中">{s}（撰写中）</span>
+          ))}
+        </nav>
+        <p class="mt-6 hidden text-xs leading-5 text-ink-2 md:block">
+          适用版本 v0.1.x<br />
+          <a class="text-zblue underline underline-offset-2" href="https://github.com/learnerCodeZ/Z-Buddy/tree/main/website" target="_blank" rel="noopener">在 GitHub 改进此文档</a>
+        </p>
+      </aside>
+
+      <!-- 正文 -->
+      <article class="doc max-w-3xl min-w-0">
+        <slot />
+      </article>
+    </div>
+  </div>
+</BaseLayout>
+
+<style is:global>
+  /* 组件样式块与 Tailwind 主样式是两个编译上下文，@apply 前必须 @reference */
+  @reference "../styles/global.css";
+
+  /* 文档正文排版（不引 typography 插件，手写够用的 prose 样式） */
+  .doc h1 { @apply text-3xl font-bold tracking-tight; }
+  .doc h2 { @apply mt-10 border-b border-hairline pb-2 text-xl font-bold; }
+  .doc h3 { @apply mt-6 text-base font-semibold; }
+  .doc p, .doc li { @apply text-sm leading-7 text-ink-2; }
+  .doc ul { @apply mt-3 list-disc space-y-1.5 pl-6; }
+  .doc ol { @apply mt-3 list-decimal space-y-1.5 pl-6; }
+  .doc a { @apply text-zblue underline underline-offset-2; }
+  .doc code { @apply rounded-md bg-mist px-1.5 py-0.5 font-mono text-[0.85em] text-ink; }
+  .doc pre { @apply mt-4 overflow-x-auto rounded-xl bg-ink p-4 text-xs leading-6 text-white/90; }
+  .doc pre code { @apply bg-transparent p-0 text-inherit; }
+  .doc table { @apply mt-4 w-full text-sm; }
+  .doc th { @apply bg-mist-2 px-3 py-2 text-left font-medium; }
+  .doc td { @apply border-t border-hairline px-3 py-2; }
+  .doc blockquote { @apply mt-4 rounded-r-lg border-l-4 border-zblue/40 bg-mist-2 px-4 py-3 text-sm text-ink-2; }
+  .doc hr { @apply my-8 border-hairline; }
+</style>

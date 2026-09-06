@@ -1,0 +1,76 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { withBase } from '../data/site';
+
+const packs = [
+  {
+    name: '团子 Mochi',
+    author: 'Z-Buddy 官方',
+    desc: '第一只原创宠物：64×64 帧、六态映射，PIL 程序化生成，版权干净、可复现。',
+    img: 'pets/mochi-loop.webp',
+    source: '内置',
+  },
+  {
+    name: '抹茶 Matcha',
+    author: 'Z-Buddy 官方',
+    desc: '一行换肤命令生成的绿色团子，是外部宠物包加载功能的实测员。',
+    img: 'pets/matcha-loop.webp',
+    source: '内置',
+  },
+];
+---
+
+<BaseLayout title={`宠物画廊 · Z-Buddy`} description="Z-Buddy 宠物画廊：原创宠物包展示与投稿指南，一张精灵图 + 一个 JSON 就是一只新宠物。">
+  <section class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">宠物画廊</h1>
+    <p class="section-sub">
+      一张精灵图（<code class="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">atlas.png</code>）+
+      一个清单（<code class="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">pet.json</code>）就是一只新宠物。
+      规范文档撰写中，投稿方式见页底。
+    </p>
+
+    <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {packs.map((p) => (
+        <div class="card transition-shadow hover:shadow-md">
+          <div class="flex h-36 items-center justify-center rounded-xl bg-mist-2">
+            <img src={withBase(p.img)} alt={`${p.name} 循环动画`} class="pixelated h-28 w-28" width="112" height="112" />
+          </div>
+          <div class="mt-4 flex items-center justify-between">
+            <h2 class="font-semibold">{p.name}</h2>
+            <span class="rounded-full bg-mist px-2.5 py-0.5 text-xs text-ink-2">{p.source}</span>
+          </div>
+          <p class="mt-2 text-sm leading-relaxed text-ink-2">{p.desc}</p>
+          <p class="mt-3 text-xs text-ink-2">作者：{p.author}</p>
+        </div>
+      ))}
+
+      <!-- 投稿占位卡 -->
+      <div class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-hairline p-6 text-center">
+        <p class="text-2xl">🐣</p>
+        <p class="mt-3 font-medium">下一只，由你孵化</p>
+        <p class="mt-2 text-sm text-ink-2">宠物包规范 v1 文档撰写中，敬请期待</p>
+      </div>
+    </div>
+
+    <!-- 安装与投稿 -->
+    <div class="mt-12 grid gap-5 md:grid-cols-2">
+      <div class="card">
+        <h2 class="font-semibold">怎么装宠物包</h2>
+        <ol class="mt-3 list-decimal space-y-1.5 pl-5 text-sm leading-6 text-ink-2">
+          <li>拿到宠物包文件夹（内含 <code class="rounded bg-mist px-1 py-0.5 font-mono text-xs">atlas.png</code> 与 <code class="rounded bg-mist px-1 py-0.5 font-mono text-xs">pet.json</code>）；</li>
+          <li>放入 <code class="rounded bg-mist px-1 py-0.5 font-mono text-xs">~/.z-buddy/pets/</code> 目录；</li>
+          <li>重启 Z-Buddy 或从托盘菜单「切换宠物」。</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h2 class="font-semibold">怎么投稿</h2>
+        <p class="mt-3 text-sm leading-6 text-ink-2">
+          规范发布前，欢迎先在
+          <a class="text-zblue underline underline-offset-2" href="https://github.com/learnerCodeZ/Z-Buddy/issues" target="_blank" rel="noopener">Issues</a>
+          晒出你的作品或提想法；规范 v1 发布后，走 PR 向本页添加卡片（Fork → 加一个 JSON → 提交）。
+          只收原创或授权明确的美术，拒绝 IP 侵权内容。
+        </p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

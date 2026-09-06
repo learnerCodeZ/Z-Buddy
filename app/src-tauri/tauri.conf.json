@@ -10,7 +10,9 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "label": "pet",
         "title": "z-buddy-pet",
+        "url": "/pet/index.html",
         "width": 240,
         "height": 300,
         "transparent": true,

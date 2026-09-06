@@ -1,0 +1,25 @@
+# Changelog
+
+本文件为 Z-Buddy 的用户视角更新日志（Keep a Changelog 风格）；
+开发视角的过程记录见各阶段总结与提交历史。
+
+## [0.1.0] - 2026-09-06
+
+### 新增
+
+- **状态联动**：六态动画（idle / thinking / working / 等待审批 / 出错 / 深夜睡觉）实时映射 ZCode Agent 生命周期；
+- **点按暂停**：点击桌宠即暂停 ZCode（hook 硬拦截，非装饰按钮），再点恢复；命令文本含 `.z-buddy/pause` 路径可豁免；
+- **悬浮窗**：置顶无边框、点按穿透、自由拖动、多显示器与 DPI 适配；
+- **系统托盘**：显示/隐藏、切换宠物、退出；
+- **宠物包加载器**：`~/.z-buddy/pets/` 外部宠物包扫描、托盘热切换、偏好持久化（`app.json`）；
+- **内置原创宠物**：团子 Mochi、抹茶 Matcha（PIL 程序化生成）；
+- **发行产物**：NSIS 安装包（中英双语向导、自选路径、可选开机自启）+ 便携版，约 4.2 MB；
+- **官网**：首页 / 下载 / 快速开始 / FAQ / 宠物画廊 / 更新日志（Astro + Tailwind CSS v4，部署于 GitHub Pages）。
+
+### 已知限制
+
+- 多 ZCode 会话并发时状态为「最后写入者胜」，会话聚合排期 Phase 2；
+- 未购买代码签名证书，SmartScreen 会提示放行（见官网下载页引导）；
+- macOS / Linux 支持：Tauri 跨平台可行，排期待定。
+
+[0.1.0]: https://github.com/learnerCodeZ/Z-Buddy/releases/tag/v0.1.0

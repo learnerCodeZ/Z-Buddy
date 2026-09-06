@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>Z-Buddy</title>
+  <link rel="stylesheet" href="./main.css" />
+</head>
+<body>
+  <div id="titlebar" data-tauri-drag-region>
+    <span id="tb-title">🐾 Z-Buddy 控制台</span>
+    <div id="tb-actions">
+      <button id="tb-min" title="最小化">─</button>
+      <button id="tb-close" title="隐藏到托盘">✕</button>
+    </div>
+  </div>
+
+  <div id="layout">
+    <nav id="sidebar">
+      <button class="nav on" data-page="dashboard">总览</button>
+      <button class="nav" data-page="pets">宠物</button>
+      <button class="nav" data-page="activity">活动</button>
+      <button class="nav disabled" data-page="tasks" disabled>任务 · P2</button>
+      <button class="nav" data-page="settings">设置</button>
+      <div id="sidebar-foot">Z-Buddy v0.2.0</div>
+    </nav>
+
+    <main id="content">
+      <section id="page-dashboard" class="page on">
+        <div id="dash-left">
+          <canvas id="dash-canvas" width="220" height="220"></canvas>
+        </div>
+        <div id="dash-right">
+          <div id="dash-status" class="big">—</div>
+          <div id="dash-detail">—</div>
+          <div id="dash-session">—</div>
+          <button id="dash-pause">⏸ 暂停 Agent</button>
+          <div id="dash-stats">—</div>
+        </div>
+        <div id="dash-timeline">
+          <h3>最近事件</h3>
+          <ul id="timeline"></ul>
+        </div>
+      </section>
+
+      <section id="page-pets" class="page">
+        <h2>宠物管理</h2>
+        <div id="pets-grid"></div>
+        <p class="hint">把自己的宠物包文件夹（atlas.png + pet.json）放进
+          <code>~/.z-buddy/pets/</code>，重启应用即可出现在这里。</p>
+      </section>
+
+      <section id="page-activity" class="page">
+        <h2>活动时间线</h2>
+        <div id="act-filters"></div>
+        <ul id="act-list"></ul>
+      </section>
+
+      <section id="page-tasks" class="page">
+        <h2>任务</h2>
+        <p class="hint">读取 ZCode 任务库（错峰任务/自动化）——Phase 2 敬请期待。</p>
+      </section>
+
+      <section id="page-settings" class="page">
+        <h2>设置</h2>
+        <label class="row">
+          <span>开机自启</span>
+          <input type="checkbox" id="set-autostart" />
+        </label>
+        <label class="row">
+          <span>关闭主界面时</span>
+          <select id="set-close">
+            <option value="hide">隐藏到托盘（推荐）</option>
+            <option value="exit">退出应用</option>
+          </select>
+        </label>
+        <div class="row about">
+          <span>关于</span>
+          <span>Z-Buddy v0.2.0 ·
+            <a href="#" id="lnk-repo">GitHub</a> ·
+            <a href="#" id="lnk-site">官方网站</a>
+          </span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

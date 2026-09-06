@@ -1,0 +1,82 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE, releaseAsset, withBase } from '../data/site';
+
+const bp = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title={`下载 · ${SITE.title}`} description="下载 Z-Buddy：Windows 安装包与便携版，免费开源，仅 4.2 MB。">
+  <section class="mx-auto max-w-4xl px-4 py-14 sm:px-6">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">下载 Z-Buddy</h1>
+    <p class="section-sub">v{SITE.version} · {SITE.date} 发布 · <a class="text-zblue underline underline-offset-2" href={SITE.releasesLatest} target="_blank" rel="noopener">GitHub Releases</a></p>
+
+    <!-- 下载按钮 -->
+    <div class="mt-8 grid gap-4 sm:grid-cols-2">
+      <a class="card group block transition-shadow hover:shadow-md" href={releaseAsset(SITE.assets.setup)}>
+        <p class="text-lg font-semibold">安装包（推荐）</p>
+        <p class="mt-1 text-sm text-ink-2">NSIS 向导 · 自选安装路径 · 可选开机自启</p>
+        <p class="mt-4 font-mono text-xs text-zblue group-hover:underline">{SITE.assets.setup}</p>
+      </a>
+      <a class="card group block transition-shadow hover:shadow-md" href={releaseAsset(SITE.assets.portable)}>
+        <p class="text-lg font-semibold">便携版</p>
+        <p class="mt-1 text-sm text-ink-2">解压即用 · 不写注册表 · 适合免安装场景</p>
+        <p class="mt-4 font-mono text-xs text-zblue group-hover:underline">{SITE.assets.portable}</p>
+      </a>
+    </div>
+    <p class="mt-3 text-xs text-ink-2">
+      校验文件：<a class="font-mono text-zblue underline underline-offset-2" href={releaseAsset(SITE.assets.sha256)}>{SITE.assets.sha256}</a>
+    </p>
+
+    <!-- 系统要求 -->
+    <h2 class="mt-14 text-xl font-bold">系统要求</h2>
+    <div class="card mt-4">
+      <ul class="grid gap-2.5 text-sm text-ink-2 sm:grid-cols-2">
+        <li>· Windows 10 / 11（x64）</li>
+        <li>· WebView2 运行时（安装器会自动处理）</li>
+        <li>· ZCode（可选：不装插件宠物也在，只是不会动）</li>
+        <li>· 磁盘空间约 5 MB</li>
+      </ul>
+    </div>
+
+    <!-- SmartScreen 引导 -->
+    <h2 class="mt-14 text-xl font-bold">Windows 提示「已保护你的电脑」？</h2>
+    <p class="mt-3 text-sm leading-relaxed text-ink-2">
+      本项目是个人开源作品，暂未购买代码签名证书（¥上千/年），所以 SmartScreen 会拦一下。安装包与校验和都来自官方
+      GitHub Releases，可自行比对 SHA256。放行方法：
+    </p>
+    <ol class="card mt-4 list-decimal space-y-2 pl-10 text-sm text-ink-2">
+      <li>在 SmartScreen 蓝色弹窗上点 <b class="text-ink">「更多信息」</b>；</li>
+      <li>点 <b class="text-ink">「仍要运行」</b>，进入正常安装向导。</li>
+    </ol>
+
+    <!-- 安装后三步 -->
+    <h2 class="mt-14 text-xl font-bold">装完之后</h2>
+    <div class="card mt-4 text-sm leading-relaxed text-ink-2">
+      <p>
+        ① 启动 Z-Buddy，<b class="text-ink">团子会出现在屏幕右下角</b>（此时它是静止的，因为你还没装插件）→
+        ② <a class="text-zblue underline underline-offset-2" href={`${bp}/docs/quick-start/`}>按快速开始安装 z-buddy 插件</a> →
+        ③ 新建一个 ZCode 会话开始干活，团子就动起来了。
+      </p>
+    </div>
+
+    <!-- 对比表 -->
+    <h2 class="mt-14 text-xl font-bold">安装包 vs 便携版</h2>
+    <div class="mt-4 overflow-hidden rounded-2xl border border-hairline bg-white">
+      <table class="w-full text-sm">
+        <thead class="bg-mist-2 text-left text-xs text-ink-2">
+          <tr>
+            <th class="px-5 py-3 font-medium"></th>
+            <th class="px-5 py-3 font-medium">安装包</th>
+            <th class="px-5 py-3 font-medium">便携版</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-hairline">
+          <tr><td class="px-5 py-3 text-ink-2">安装向导 / 自选路径</td><td class="px-5 py-3">✅</td><td class="px-5 py-3">—</td></tr>
+          <tr><td class="px-5 py-3 text-ink-2">开机自启</td><td class="px-5 py-3">✅ 向导内勾选</td><td class="px-5 py-3">手动建快捷方式</td></tr>
+          <tr><td class="px-5 py-3 text-ink-2">卸载</td><td class="px-5 py-3">系统「应用」里卸载</td><td class="px-5 py-3">删文件夹即走</td></tr>
+          <tr><td class="px-5 py-3 text-ink-2">升级</td><td class="px-5 py-3">覆盖安装新版</td><td class="px-5 py-3">解压覆盖</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</BaseLayout>

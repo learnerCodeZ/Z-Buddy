@@ -1,0 +1,44 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../data/site';
+
+const releases = [
+  {
+    version: SITE.version,
+    date: SITE.date,
+    tag: '首个公开版本',
+    items: [
+      '状态联动：六态动画实时映射 Agent 生命周期（含深夜 Zzz 睡觉）',
+      '点按暂停：点桌宠 = ZCode 停手，hook 硬拦截闭环，支持命令级豁免',
+      '悬浮窗：置顶无边框、点按穿透、自由拖动、多显示器与 DPI 适配',
+      '托盘菜单与开机自启（安装包可选）',
+      '宠物包加载器：~/.z-buddy/pets/ 外部包扫描、热切换、偏好持久化',
+      '内置原创宠物「团子 Mochi」「抹茶 Matcha」',
+      'NSIS 安装包（中英双语向导）+ 便携版，仅 4.2 MB',
+    ],
+  },
+];
+---
+
+<BaseLayout title={`更新日志 · Z-Buddy`} description="Z-Buddy 更新日志：每个版本改了什么，一目了然。">
+  <section class="mx-auto max-w-3xl px-4 py-14 sm:px-6">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">更新日志</h1>
+    <p class="section-sub">完整历史见 <a class="text-zblue underline underline-offset-2" href={SITE.releasesLatest} target="_blank" rel="noopener">GitHub Releases</a>。</p>
+
+    {releases.map((r) => (
+      <article class="mt-10">
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 class="text-xl font-bold">v{r.version}</h2>
+          <span class="rounded-full bg-mist px-2.5 py-0.5 text-xs text-ink-2">{r.tag}</span>
+          <time class="text-sm text-ink-2">{r.date}</time>
+        </div>
+        <ul class="mt-4 list-disc space-y-2 pl-6 text-sm leading-7 text-ink-2">
+          {r.items.map((it) => <li set:html={it} />)}
+        </ul>
+        <p class="mt-4 text-sm">
+          <a class="text-zblue underline underline-offset-2" href={SITE.releaseTag} target="_blank" rel="noopener">下载 v{r.version} →</a>
+        </p>
+      </article>
+    ))}
+  </section>
+</BaseLayout>

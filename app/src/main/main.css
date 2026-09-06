@@ -1,0 +1,148 @@
+/* Z-Buddy 主界面：深色驾驶舱 */
+:root {
+  --bg: #1e2229;
+  --panel: #2f3542;
+  --panel-2: #353b48;
+  --text: #f5f6fa;
+  --text-dim: #808e9b;
+  --accent: #ff9f43;
+  --ok: #2ecc71;
+  --warn: #ffd32a;
+  --err: #ff6b6b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+}
+
+/* ---- 标题栏 ---- */
+#titlebar {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  background: #171a20;
+  user-select: none;
+}
+#tb-title { font-weight: 600; color: var(--accent); }
+#tb-actions button {
+  width: 34px; height: 26px;
+  border: 0; background: transparent; color: var(--text);
+  cursor: pointer; border-radius: 6px;
+}
+#tb-actions button:hover { background: #ffffff22; }
+#tb-close:hover { background: #e74c3c !important; }
+
+/* ---- 布局 ---- */
+#layout {
+  display: flex;
+  height: calc(100vh - 36px);
+}
+#sidebar {
+  width: 128px;
+  background: #171a20;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 8px;
+}
+.nav {
+  border: 0; border-radius: 8px;
+  background: transparent; color: var(--text-dim);
+  padding: 9px 12px; text-align: left;
+  cursor: pointer; font-size: 13px;
+}
+.nav:hover { background: #ffffff14; color: var(--text); }
+.nav.on { background: var(--panel); color: var(--accent); font-weight: 600; }
+.nav.disabled { opacity: 0.35; cursor: not-allowed; }
+#sidebar-foot { margin-top: auto; font-size: 11px; color: var(--text-dim); text-align: center; }
+
+#content { flex: 1; overflow: auto; padding: 18px 22px; }
+.page { display: none; }
+.page.on { display: block; }
+h2 { margin: 0 0 14px; font-size: 17px; }
+h3 { margin: 0 0 8px; font-size: 13px; color: var(--text-dim); }
+.hint { color: var(--text-dim); }
+code { background: #ffffff14; padding: 1px 5px; border-radius: 4px; }
+
+/* ---- 总览 ---- */
+#page-dashboard { display: none; }
+#page-dashboard.on { display: flex; flex-wrap: wrap; gap: 18px; }
+#dash-left {
+  width: 240px; height: 240px;
+  background: var(--panel); border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+#dash-canvas { width: 200px; height: 200px; image-rendering: pixelated; }
+#dash-right { flex: 1; min-width: 260px; }
+#dash-status { font-size: 20px; font-weight: 700; }
+#dash-detail, #dash-session { color: var(--text-dim); margin: 4px 0; }
+#dash-pause {
+  margin: 12px 0; padding: 9px 18px;
+  border: 0; border-radius: 10px;
+  background: var(--accent); color: #20150a;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+}
+#dash-pause:hover { filter: brightness(1.1); }
+#dash-pause.on { background: #57606f; color: #f1f2f6; }
+#dash-stats { color: var(--text-dim); }
+#dash-timeline {
+  width: 100%;
+  background: var(--panel); border-radius: 12px; padding: 12px 16px;
+}
+#timeline { list-style: none; margin: 0; padding: 0; max-height: 200px; overflow: auto; }
+#timeline li { padding: 3px 0; color: #dcdde1; }
+#timeline li b { color: var(--accent); font-weight: 600; }
+
+/* ---- 宠物网格 ---- */
+#pets-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+.pet-card {
+  width: 150px; padding: 12px;
+  background: var(--panel); border-radius: 14px;
+  text-align: center; cursor: pointer;
+  border: 2px solid transparent;
+}
+.pet-card:hover { background: var(--panel-2); }
+.pet-card.on { border-color: var(--accent); }
+.pet-card canvas { width: 96px; height: 96px; image-rendering: pixelated; }
+.pet-card .tag { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+/* ---- 活动时间线 ---- */
+#act-filters { margin-bottom: 10px; }
+#act-filters button {
+  margin-right: 6px; padding: 4px 10px;
+  border: 0; border-radius: 8px;
+  background: var(--panel); color: var(--text); cursor: pointer;
+}
+#act-filters button.on { background: var(--accent); color: #20150a; font-weight: 600; }
+#act-list { list-style: none; margin: 0; padding: 0; }
+#act-list li {
+  padding: 6px 10px; margin-bottom: 4px;
+  background: var(--panel); border-radius: 8px;
+  color: #dcdde1; font-size: 12px;
+}
+#act-list li b { color: var(--accent); }
+
+/* ---- 设置 ---- */
+.row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; margin-bottom: 8px;
+  background: var(--panel); border-radius: 10px;
+}
+.row a { color: var(--accent); }
+.row select, .row input {
+  accent-color: var(--accent);
+}
+.row select {
+  background: var(--panel-2); color: var(--text);
+  border: 0; border-radius: 6px; padding: 4px 8px;
+}

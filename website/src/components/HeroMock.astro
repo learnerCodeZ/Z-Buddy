@@ -1,0 +1,73 @@
+---
+// hero 产品演示窗口：仿 ZCode 官网的「应用界面 mock」手法（HTML/CSS 实现，非截图）。
+// 窗口内展示 ZCode 会话 + 右下角 Z-Buddy 状态条；文案用真实产品语料。
+import { withBase } from '../data/site';
+---
+
+<div class="glass-panel overflow-hidden rounded-2xl shadow-2xl">
+  <!-- 标题栏 -->
+  <div class="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+    <span class="h-3 w-3 rounded-full bg-[#ff5f57]"></span>
+    <span class="h-3 w-3 rounded-full bg-[#febc2e]"></span>
+    <span class="h-3 w-3 rounded-full bg-[#28c840]"></span>
+    <span class="ml-3 font-mono text-xs text-white/50">ZCode — D:\MYCODE\gomoku-ai</span>
+  </div>
+
+  <div class="grid sm:grid-cols-[180px_1fr]">
+    <!-- 任务侧栏 -->
+    <div class="hidden border-r border-white/10 p-4 sm:block">
+      <p class="mb-3 text-[11px] font-medium tracking-widest text-white/40">任务</p>
+      <ul class="space-y-2.5 text-xs">
+        <li class="flex items-center gap-2 rounded-lg bg-white/10 px-2.5 py-1.5 text-white">
+          <span class="h-1.5 w-1.5 rounded-full bg-zblue"></span>修复宠物拖动竞态
+        </li>
+        <li class="flex items-center gap-2 px-2.5 py-1.5 text-white/60">
+          <span class="h-1.5 w-1.5 rounded-full bg-ok"></span>重构 parser 模块
+        </li>
+        <li class="flex items-center gap-2 px-2.5 py-1.5 text-white/60">
+          <span class="h-1.5 w-1.5 rounded-full bg-ok"></span>补齐单测
+        </li>
+        <li class="flex items-center gap-2 px-2.5 py-1.5 text-white/60">
+          <span class="h-1.5 w-1.5 rounded-full bg-white/30"></span>发布 v0.1.0
+        </li>
+      </ul>
+      <p class="mt-5 text-[11px] text-white/30">GoalComplete · 89K tokens</p>
+    </div>
+
+    <!-- 会话流 -->
+    <div class="flex min-h-[300px] flex-col p-4 sm:p-5">
+      <div class="space-y-3.5 text-xs leading-relaxed sm:text-sm">
+        <div class="flex justify-end">
+          <p class="max-w-[85%] rounded-xl rounded-br-sm bg-white/10 px-3.5 py-2 text-white/90">
+            帮我修一下宠物不能拖动的 bug，好像是和点击穿透的竞态。
+          </p>
+        </div>
+        <div class="text-white/70">
+          <p>
+            已定位根因：穿透守护线程每 200ms 检测光标，拖动一开始就把穿透打开了。
+            我改成 <span class="text-white">mousedown 阈值 + 拖拽期守护静默</span>，正在改 3 个文件。
+          </p>
+          <p class="mt-2 font-mono text-[11px] text-white/40">● Edit src/main.js · ● Edit lib.rs · ⋯</p>
+        </div>
+      </div>
+
+      <!-- Z-Buddy 状态条（窗口右下角，本产品在演示里的位置感） -->
+      <div class="mt-auto flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+        <img
+          src={withBase('pets/mochi-loop.webp')}
+          alt="团子正在工作的循环动画"
+          class="pixelated h-12 w-12"
+          width="48"
+          height="48"
+        />
+        <div class="min-w-0">
+          <p class="text-xs font-medium text-white">团子 <span class="text-white/50">· working</span></p>
+          <p class="truncate text-[11px] text-white/50">ZCode 干活中，点一下团子可以随时暂停</p>
+        </div>
+        <span class="ml-auto flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[10px] text-white/70">
+          <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-ok"></span>运行中
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
