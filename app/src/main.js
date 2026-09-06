@@ -18,21 +18,24 @@ const STATUS_LABEL = {
 };
 
 // ---- 宠物包加载（hatch-pet 兼容：atlas.png + pet.json，行=状态，横向分帧）----
-// 优先外部包（~/.z-buddy/pets/<名>/），无外部包时回退内置团子
+// 优先外部包（~/.z-buddy/pets/<名>/，按 app.json 的偏好选择），无则回退内置团子
 const { convertFileSrc } = window.__TAURI__.core;
+const { listen } = window.__TAURI__.event;
 let manifest = null;
 const atlas = new Image();
 
-async function loadPack() {
+async function loadPack(pref) {
   try {
-    const pets = await invoke("list_external_pets");
-    if (pets.length) {
-      const p = pets[0];
-      const m = await (await fetch(convertFileSrc(p.dir + "/pet.json"))).json();
-      manifest = m;
-      atlas.src = convertFileSrc(p.dir + "/atlas.png");
-      titleEl.textContent = `Z-Buddy · ${m.title || m.name}（外部包）`;
-      return;
+    if (pref && pref !== "mochi") {
+      const pets = await invoke("list_external_pets");
+      const p = pets.find((x) => x.name === pref);
+      if (p) {
+        const m = await (await fetch(convertFileSrc(p.dir + "/pet.json"))).json();
+        manifest = m;
+        atlas.src = convertFileSrc(p.dir + "/atlas.png");
+        titleEl.textContent = `Z-Buddy · ${m.title || m.name}（外部包）`;
+        return;
+      }
     }
   } catch (err) {
     console.warn("外部宠物包加载失败，回退内置:", err);
@@ -45,7 +48,11 @@ async function loadPack() {
   } catch {}
 }
 
-loadPack();
+const petPref = await invoke("get_pet_pref_cmd");
+await loadPack(petPref);
+
+// 托盘“切换宠物”→ Rust 写偏好并广播事件 → 这里热切换
+listen("pet-changed", (e) => loadPack(e.payload));
 
 let frameCol = 0;
 let lastFrameAt = 0;

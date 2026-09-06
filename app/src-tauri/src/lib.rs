@@ -8,7 +8,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 /// 拖动进行中标记：拖动期间点击穿透守护必须闭嘴，
 /// 否则光标移出宠物矩形瞬间穿透被打开，原生拖拽当场夭折。
@@ -19,6 +19,45 @@ fn z_buddy_dir() -> PathBuf {
         .or_else(|_| std::env::var("HOME"))
         .unwrap_or_else(|_| ".".into());
     PathBuf::from(home).join(".z-buddy")
+}
+
+fn app_config_path() -> PathBuf {
+    z_buddy_dir().join("app.json")
+}
+
+fn get_pet_pref() -> String {
+    fs::read_to_string(app_config_path())
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .and_then(|v| v.get("pet").and_then(|p| p.as_str()).map(String::from))
+        .unwrap_or_else(|| "mochi".into())
+}
+
+fn set_pet_pref(name: &str) -> bool {
+    let _ = fs::create_dir_all(z_buddy_dir());
+    fs::write(
+        app_config_path(),
+        serde_json::json!({ "pet": name }).to_string(),
+    )
+    .is_ok()
+}
+
+/// 可选宠物列表：内置团子优先，其后是外部包
+fn pet_list() -> Vec<String> {
+    let mut list = vec!["mochi".to_string()];
+    if let Ok(entries) = fs::read_dir(z_buddy_dir().join("pets")) {
+        for e in entries.flatten() {
+            if e.path().join("pet.json").is_file() {
+                list.push(e.file_name().to_string_lossy().to_string());
+            }
+        }
+    }
+    list
+}
+
+#[tauri::command]
+fn get_pet_pref_cmd() -> String {
+    get_pet_pref()
 }
 
 /// 扫描外部宠物包：~/.z-buddy/pets/<名>/pet.json 存在即为合法包
@@ -123,9 +162,52 @@ pub fn run() {
             read_state,
             set_pause,
             set_dragging,
-            list_external_pets
+            list_external_pets,
+            get_pet_pref_cmd
         ])
         .setup(|app| {
+            // ---- 托盘：显示/隐藏 · 切换宠物 · 退出 ----
+            use tauri::menu::{Menu, MenuItem};
+            use tauri::tray::TrayIconBuilder;
+            let show_hide =
+                MenuItem::with_id(app, "show_hide", "显示 / 隐藏宠物", true, None::<&str>)?;
+            let next_pet = MenuItem::with_id(app, "next_pet", "切换宠物", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "退出 Z-Buddy", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_hide, &next_pet, &quit])?;
+            TrayIconBuilder::with_id("zbuddy-tray")
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("Z-Buddy")
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| {
+                    let Some(win) = app.get_webview_window("main") else { return };
+                    match event.id().as_ref() {
+                        "show_hide" => {
+                            if win.is_visible().unwrap_or(false) {
+                                let _ = win.hide();
+                            } else {
+                                let _ = win.show();
+                                let _ = win.set_focus();
+                            }
+                        }
+                        "next_pet" => {
+                            let list = pet_list();
+                            let cur = get_pet_pref();
+                            let idx = list
+                                .iter()
+                                .position(|p| p == &cur)
+                                .map(|i| (i + 1) % list.len())
+                                .unwrap_or(0);
+                            if let Some(next) = list.get(idx) {
+                                let _ = set_pet_pref(next);
+                                let _ = win.emit("pet-changed", next.clone());
+                            }
+                        }
+                        "quit" => app.exit(0),
+                        _ => {}
+                    }
+                })
+                .build(app)?;
             // 桌宠出生在主屏右下角（按窗口实际物理尺寸计算，适配任意 DPI 缩放）
             if let Some(win) = app.get_webview_window("main") {
                 if let Ok(Some(mon)) = win.current_monitor() {
