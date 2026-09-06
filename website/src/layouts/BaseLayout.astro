@@ -27,6 +27,16 @@ const ogImage = withBase('og.png');
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- 主题预设：渲染前挂 .dark，避免首屏闪白/闪黑（跟随系统 + localStorage 记忆） -->
+    <script is:inline>
+      (function () {
+        var stored = localStorage.getItem('zb-theme');
+        var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark) document.documentElement.classList.add('dark');
+      })();
+    </script>
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171717" />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="icon" href={withBase('favicon.ico')} sizes="any" />
@@ -37,15 +47,15 @@ const ogImage = withBase('og.png');
     <meta property="og:type" content="website" />
     <meta name="generator" content={Astro.generator} />
   </head>
-  <body class="bg-white font-sans text-ink antialiased">
-    <!-- 公告条（对齐 ZCode 官网） -->
-    <div class="bg-ink px-4 py-2 text-center text-xs text-white/90 sm:text-sm">
+  <body class="bg-surface font-sans text-ink antialiased">
+    <!-- 公告条（对齐 ZCode 官网；两种主题下都保持深底白字） -->
+    <div class="bg-[#101012] px-4 py-2 text-center text-xs text-white/90 sm:text-sm">
       🎉 v{SITE.version} 发布：状态联动 · 点按暂停 · 宠物包加载 ——
       <a href={`${bp}/changelog/`} class="underline underline-offset-2 hover:text-white">看更新了什么</a>
     </div>
 
     <!-- 顶部导航 -->
-    <header class="sticky top-0 z-50 border-b border-hairline bg-white/80 backdrop-blur">
+    <header class="sticky top-0 z-50 border-b border-hairline bg-surface/80 backdrop-blur">
       <nav class="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
         <a href={bp + '/'} class="flex items-center gap-2 font-semibold">
           <img src={withBase('pets/mochi-idle.webp')} alt="" class="pixelated h-7 w-7" />
@@ -55,7 +65,17 @@ const ogImage = withBase('og.png');
           {nav.map((n) => <a href={n.href} class="transition-colors hover:text-ink">{n.label}</a>)}
           <a href={SITE.repo} class="transition-colors hover:text-ink" target="_blank" rel="noopener">GitHub</a>
         </div>
-        <a href={`${bp}/download/`} class="rounded-full bg-zblue px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zblue-hover">立即下载</a>
+        <div class="flex items-center gap-3">
+          <button
+            id="theme-toggle"
+            aria-label="切换深色 / 浅色主题"
+            class="flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-ink transition-colors hover:bg-soft"
+          >
+            <svg class="h-4 w-4 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            <svg class="hidden h-4 w-4 dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
+          </button>
+          <a href={`${bp}/download/`} class="rounded-full bg-zblue px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zblue-hover">立即下载</a>
+        </div>
       </nav>
     </header>
 
@@ -64,7 +84,7 @@ const ogImage = withBase('og.png');
     </main>
 
     <!-- 页脚（对齐 ZCode 的版权条式布局） -->
-    <footer class="border-t border-hairline bg-mist-2">
+    <footer class="border-t border-hairline bg-elevated">
       <div class="mx-auto max-w-6xl px-4 py-10 text-xs leading-6 text-ink-2 sm:px-6">
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
           <span class="font-medium text-ink">© 2026 learnerCodeZ · Z-Buddy</span>
@@ -81,5 +101,13 @@ const ogImage = withBase('og.png');
         </p>
       </div>
     </footer>
+
+    <!-- 主题切换：翻转 .dark 并记住选择 -->
+    <script>
+      document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const dark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('zb-theme', dark ? 'dark' : 'light');
+      });
+    </script>
   </body>
 </html>

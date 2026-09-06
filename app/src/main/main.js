@@ -15,8 +15,8 @@ document.querySelectorAll(".nav").forEach((btn) => {
   });
 });
 
-// ---- 标题栏 ----
-document.querySelector("#tb-min").onclick = () => invoke("hide_main");
+// ---- 标题栏 ── 最小化走系统 API；✕ 走 CloseRequested（按配置隐藏/退出）----
+document.querySelector("#tb-min").onclick = () => invoke("plugin:window|minimize");
 document.querySelector("#tb-close").onclick = () => window.close();
 
 // ---- 装配各页 ----

@@ -93,7 +93,7 @@ const faqs = [
   </section>
 
   <!-- ② 三大卖点 -->
-  <section class="border-t border-hairline bg-mist-2 py-16 sm:py-20">
+  <section class="border-t border-hairline bg-elevated py-16 sm:py-20">
     <div class="mx-auto max-w-6xl px-4 sm:px-6">
       <h2 class="section-title text-center">为什么养一只 Z-Buddy</h2>
       <div class="mt-10 grid gap-5 md:grid-cols-3">
@@ -128,7 +128,7 @@ const faqs = [
   </section>
 
   <!-- ④ 宠物秀 -->
-  <section class="border-t border-hairline bg-mist-2 py-16 sm:py-20">
+  <section class="border-t border-hairline bg-elevated py-16 sm:py-20">
     <div class="mx-auto max-w-6xl px-4 sm:px-6">
       <h2 class="section-title">认识一下家里的宠物</h2>
       <p class="section-sub">全部原创程序化生成，版权干净。想自己捏一只？<a class="text-zblue underline underline-offset-2" href={`${bp}/docs/faq/`}>看宠物包玩法</a>。</p>
@@ -170,39 +170,29 @@ const faqs = [
   </section>
 
   <!-- ⑥ 全部下载 -->
-  <section id="download" class="border-t border-hairline bg-mist-2 py-16 sm:py-20">
+  <section id="download" class="border-t border-hairline bg-elevated py-16 sm:py-20">
     <div class="mx-auto max-w-6xl px-4 sm:px-6">
       <h2 class="section-title">全部下载</h2>
       <p class="section-sub">v{SITE.version} · {SITE.date} · <a class="text-zblue underline underline-offset-2" href={SITE.releasesLatest} target="_blank" rel="noopener">前往 GitHub Releases</a></p>
-      <div class="mt-8 overflow-hidden rounded-2xl border border-hairline bg-white">
-        <table class="w-full text-sm">
-          <tbody class="divide-y divide-hairline">
-            <tr>
-              <td class="px-5 py-4">
-                <p class="font-medium">Windows 安装包（推荐）</p>
-                <p class="mt-0.5 text-xs text-ink-2">NSIS 向导 · 自选路径 · 支持开机自启</p>
-              </td>
-              <td class="px-5 py-4 text-right">
-                <a class="text-zblue underline underline-offset-2" href={releaseAsset(SITE.assets.setup)}>{SITE.assets.setup}</a>
-              </td>
-            </tr>
-            <tr>
-              <td class="px-5 py-4">
-                <p class="font-medium">Windows 便携版</p>
-                <p class="mt-0.5 text-xs text-ink-2">解压即用 · 不写注册表</p>
-              </td>
-              <td class="px-5 py-4 text-right">
-                <a class="text-zblue underline underline-offset-2" href={releaseAsset(SITE.assets.portable)}>{SITE.assets.portable}</a>
-              </td>
-            </tr>
-            <tr>
-              <td class="px-5 py-4 font-medium">SHA256 校验文件</td>
-              <td class="px-5 py-4 text-right">
-                <a class="text-zblue underline underline-offset-2" href={releaseAsset(SITE.assets.sha256)}>{SITE.assets.sha256}</a>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="mt-8 divide-y divide-hairline overflow-hidden rounded-2xl border border-hairline bg-card">
+        <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-4">
+          <div>
+            <p class="font-medium">Windows 安装包（推荐）</p>
+            <p class="mt-0.5 text-xs text-ink-2">NSIS 向导 · 自选路径 · 支持开机自启</p>
+          </div>
+          <a class="shrink-0 font-mono text-sm text-zblue underline underline-offset-2" href={releaseAsset(SITE.assets.setup)}>{SITE.assets.setup}</a>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-4">
+          <div>
+            <p class="font-medium">Windows 便携版</p>
+            <p class="mt-0.5 text-xs text-ink-2">解压即用 · 不写注册表</p>
+          </div>
+          <a class="shrink-0 font-mono text-sm text-zblue underline underline-offset-2" href={releaseAsset(SITE.assets.portable)}>{SITE.assets.portable}</a>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-4">
+          <p class="font-medium">SHA256 校验文件</p>
+          <a class="shrink-0 font-mono text-sm text-zblue underline underline-offset-2" href={releaseAsset(SITE.assets.sha256)}>{SITE.assets.sha256}</a>
+        </div>
       </div>
     </div>
   </section>
@@ -211,7 +201,7 @@ const faqs = [
   <section class="py-16 sm:py-20">
     <div class="mx-auto max-w-3xl px-4 sm:px-6">
       <h2 class="section-title text-center">常见问题</h2>
-      <div class="mt-10 divide-y divide-hairline rounded-2xl border border-hairline bg-white px-6">
+      <div class="mt-10 divide-y divide-hairline rounded-2xl border border-hairline bg-card px-6">
         {faqs.map((f) => (
           <details class="group py-4">
             <summary class="cursor-pointer list-none font-medium marker:hidden">

@@ -38,6 +38,9 @@ pub fn open_main(app: &tauri::AppHandle) {
     .inner_size(920.0, 620.0)
     .min_inner_size(760.0, 520.0)
     .center()
+    .decorations(false)
+    .resizable(false)
+    .maximizable(false)
     .build();
 }
 

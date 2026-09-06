@@ -24,20 +24,20 @@ const packs = [
   <section class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
     <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">宠物画廊</h1>
     <p class="section-sub">
-      一张精灵图（<code class="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">atlas.png</code>）+
-      一个清单（<code class="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">pet.json</code>）就是一只新宠物。
+      一张精灵图（<code class="rounded bg-soft px-1.5 py-0.5 font-mono text-xs">atlas.png</code>）+
+      一个清单（<code class="rounded bg-soft px-1.5 py-0.5 font-mono text-xs">pet.json</code>）就是一只新宠物。
       规范文档撰写中，投稿方式见页底。
     </p>
 
     <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {packs.map((p) => (
         <div class="card transition-shadow hover:shadow-md">
-          <div class="flex h-36 items-center justify-center rounded-xl bg-mist-2">
+          <div class="flex h-36 items-center justify-center rounded-xl bg-elevated">
             <img src={withBase(p.img)} alt={`${p.name} 循环动画`} class="pixelated h-28 w-28" width="112" height="112" />
           </div>
           <div class="mt-4 flex items-center justify-between">
             <h2 class="font-semibold">{p.name}</h2>
-            <span class="rounded-full bg-mist px-2.5 py-0.5 text-xs text-ink-2">{p.source}</span>
+            <span class="rounded-full bg-soft px-2.5 py-0.5 text-xs text-ink-2">{p.source}</span>
           </div>
           <p class="mt-2 text-sm leading-relaxed text-ink-2">{p.desc}</p>
           <p class="mt-3 text-xs text-ink-2">作者：{p.author}</p>
@@ -57,8 +57,8 @@ const packs = [
       <div class="card">
         <h2 class="font-semibold">怎么装宠物包</h2>
         <ol class="mt-3 list-decimal space-y-1.5 pl-5 text-sm leading-6 text-ink-2">
-          <li>拿到宠物包文件夹（内含 <code class="rounded bg-mist px-1 py-0.5 font-mono text-xs">atlas.png</code> 与 <code class="rounded bg-mist px-1 py-0.5 font-mono text-xs">pet.json</code>）；</li>
-          <li>放入 <code class="rounded bg-mist px-1 py-0.5 font-mono text-xs">~/.z-buddy/pets/</code> 目录；</li>
+          <li>拿到宠物包文件夹（内含 <code class="rounded bg-soft px-1 py-0.5 font-mono text-xs">atlas.png</code> 与 <code class="rounded bg-soft px-1 py-0.5 font-mono text-xs">pet.json</code>）；</li>
+          <li>放入 <code class="rounded bg-soft px-1 py-0.5 font-mono text-xs">~/.z-buddy/pets/</code> 目录；</li>
           <li>重启 Z-Buddy 或从托盘菜单「切换宠物」。</li>
         </ol>
       </div>

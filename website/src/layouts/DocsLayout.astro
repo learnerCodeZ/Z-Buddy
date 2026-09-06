@@ -3,10 +3,15 @@ import BaseLayout from './BaseLayout.astro';
 import { SITE, withBase } from '../data/site';
 
 interface Props {
-  title: string;
+  // Markdown 页面的 layout 收到的是 frontmatter 整包，而不是解构后的 title
+  frontmatter?: { title?: string; description?: string };
+  title?: string;
   description?: string;
 }
-const { title, description } = Astro.props;
+const {
+  title = Astro.props.frontmatter?.title ?? '文档',
+  description = Astro.props.frontmatter?.description,
+} = Astro.props;
 const bp = import.meta.env.BASE_URL;
 
 const links = [
@@ -24,7 +29,7 @@ const soon = ['安装指南', '使用指南', '宠物包规范 v1', '架构与�
         <p class="text-sm font-semibold">文档</p>
         <nav class="mt-3 flex flex-row flex-wrap gap-x-4 gap-y-2 text-sm md:flex-col md:flex-nowrap">
           {links.map((l) => (
-            <a href={l.href} class:list={['rounded-md px-2 py-1 -mx-2', Astro.url.pathname === l.href || (Astro.url.pathname + '/') === l.href ? 'bg-mist font-medium text-ink' : 'text-ink-2 hover:text-ink']}>
+            <a href={l.href} class:list={['rounded-md px-2 py-1 -mx-2', Astro.url.pathname === l.href || (Astro.url.pathname + '/') === l.href ? 'bg-soft font-medium text-ink' : 'text-ink-2 hover:text-ink']}>
               {l.label}
             </a>
           ))}
@@ -58,12 +63,12 @@ const soon = ['安装指南', '使用指南', '宠物包规范 v1', '架构与�
   .doc ul { @apply mt-3 list-disc space-y-1.5 pl-6; }
   .doc ol { @apply mt-3 list-decimal space-y-1.5 pl-6; }
   .doc a { @apply text-zblue underline underline-offset-2; }
-  .doc code { @apply rounded-md bg-mist px-1.5 py-0.5 font-mono text-[0.85em] text-ink; }
-  .doc pre { @apply mt-4 overflow-x-auto rounded-xl bg-ink p-4 text-xs leading-6 text-white/90; }
+  .doc code { @apply rounded-md bg-soft px-1.5 py-0.5 font-mono text-[0.85em] text-ink; }
+  .doc pre { @apply mt-4 overflow-x-auto rounded-xl bg-[#16181d] p-4 text-xs leading-6 text-[#e6e6e6]; }
   .doc pre code { @apply bg-transparent p-0 text-inherit; }
   .doc table { @apply mt-4 w-full text-sm; }
-  .doc th { @apply bg-mist-2 px-3 py-2 text-left font-medium; }
+  .doc th { @apply bg-elevated px-3 py-2 text-left font-medium; }
   .doc td { @apply border-t border-hairline px-3 py-2; }
-  .doc blockquote { @apply mt-4 rounded-r-lg border-l-4 border-zblue/40 bg-mist-2 px-4 py-3 text-sm text-ink-2; }
+  .doc blockquote { @apply mt-4 rounded-r-lg border-l-4 border-zblue/40 bg-elevated px-4 py-3 text-sm text-ink-2; }
   .doc hr { @apply my-8 border-hairline; }
 </style>
