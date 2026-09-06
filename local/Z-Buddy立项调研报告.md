@@ -265,20 +265,21 @@ ZCode 的插件体系与 Claude Code 兼容：
 1. **状态感知**：hook 脚本在 Agent 生命周期节点（会话开始/结束、工具调用、权限请求、任务完成）向桌宠应用上报事件；桌宠未运行时**静默跳过**（抄 clawd 的无侵入降级）；
 2. **通信**：MVP 用本地文件（状态 JSON）最简单稳妥，Phase 2 升级为本地 HTTP/WebSocket（动态端口写入 `~/.z-buddy/runtime.json`，同 clawd 方案）；
 3. **宠物包格式：直接兼容 Codex hatch-pet 格式**（精灵图 + 动画行状态映射）——这样能立刻白嫖 Petdex 的 4681+ 宠物和 clawd 的动画包生态，同时自己也能用 skill 生成；
-4. **技术栈选型**：Electron（clawd 同款，生态最熟）或 Tauri（更轻）或 PySide6（Codex-Pet-Live 同款）。倾向 Electron/Tauri，Windows 优先（本人环境）再跨平台。
+4. **技术栈选型（✅ Phase 0 定稿）**：**主栈 Tauri**——同规格最小样品实测内存 30.6MB/单进程 vs Electron 334.9MB/4 进程（11 倍），桌宠常驻进程内存是生命线；前端层两者通用（Web 技术），迁移无浪费。Electron/PySide6 保留备选。实验数据见 [phase-0 笔记](notes/phase/phase-0-技术验证总结.md)，demo 代码在 `lab/`。Windows 优先，再跨平台。
 
 ---
 
 ## 6. 分阶段计划
 
-### Phase 0 — 技术验证（当前阶段）
+### Phase 0 — 技术验证（✅ 2026-09-06 完成，详见 [phase-0 笔记](notes/phase/phase-0-技术验证总结.md)）
 
-- [ ] 验证 ZCode hooks 全量事件类型（不只是 SessionStart：工具调用/权限请求/任务完成各有哪些 hook 名）
-- [ ] 写一个最小 hook 脚本，把事件写入 `~/.z-buddy/state.json`，用 ZCode 跑一个任务观察事件流
-- [ ] 用 Electron/Tauri 起一个置顶透明窗口，读取 state.json 切换两帧动画（idle / running）
-- [ ] **打断行为实测**（Computer Use 协同的前置调研，见 8.1-Q4）：让 ZCode 操控电脑时故意移动鼠标 / 关闭目标窗口，记录 Agent 的真实反应（重试？改道？卡住？），验证 8.1 的协议层推断
-- [ ] **"操作权证"暂停机制验证**（见 8.4）：验证能否通过插件/hook/MCP 通道实现对电脑操作的暂停与恢复——L2 冲突协调层的技术前提
-- **里程碑：ZCode 干活时，屏幕角落有个东西会动。**
+- [x] 验证 ZCode hooks 全量事件类型 → **官方 7 事件确认 + stdin 契约实测**；意外收获：`PostToolUseFailure.is_interrupt` 官方打断信号
+- [x] 写一个最小 hook 脚本，把事件写入 state 文件，观察事件流 → **实测捕获成功**
+- [x] **打断行为实测** → 窗口强关 → 结构化错误 + re-observe 指引，与 8.1-Q4 预测一致（真人鼠标竞态测试遗留至 Phase 1 初）
+- [x] **"操作权证"暂停机制验证** → hook `permissionDecision:"deny"` 拦截/豁免/恢复全闭环通过
+- [x] Electron/Tauri 选型对拼 → **Tauri 定稿**（30.6MB vs 334.9MB）
+- [x] 桌面调研 Q4/Q5/Q6 → Key 解耦 / 发现 tasks-index.sqlite / 取消降级方案
+- **里程碑：达成——ZCode 干活时屏幕角落有个东西会动（实验样品已截图验证）。**
 
 ### Phase 1 — MVP：仿 Codex 桌宠
 
@@ -487,7 +488,7 @@ ZCode 的插件体系与 Claude Code 兼容：
 | 用户物理输入空闲时长 | ✅ 系统级 API | Win32 `GetLastInputInfo`、macOS `CGEventSourceSecondsSinceLastEventType` |
 | 目标窗口存活性 | ✅ 可查 | 无障碍窗口枚举 |
 | element_stale 感知 | ✅ 协议内建 | 元素过期错误本身就是事件源 |
-| 暂停 Agent 的电脑操作 | ⚠️ **需设计验证** | 候选方案：Z-Buddy 自带 MCP server 提供"操作权证"（Agent 每次前台操作前需 acquire，桌宠可拒发实现暂停）；或 hook 层拦截。**列为 Phase 0 实验** |
+| 暂停 Agent 的电脑操作 | ✅ **已验证（Phase 0 实测）** | ~~MCP 权证~~ 定稿：PreToolUse hook 返回 `permissionDecision:"deny"` 硬拦截 + 豁免清单（含 "pause.flag" 的命令穿透），拦截/豁免/恢复全闭环通过 |
 
 ### 8.5 对路线图的影响
 
@@ -540,10 +541,10 @@ ZCode 的插件体系与 Claude Code 兼容：
 - **防误触**：鼠标高速掠过宠物不弹出（移动速度阈值 + 悬停延时），只在停留时触发；
 - 位置跟随宠物，支持多显示器。
 
-**数据源（零新增基建，100% 复用 hooks 管道）**：
+**数据源（Phase 0 后升级为双通道，零新增基建）**：
 
-- 任务边界：`SessionStart`/`Stop` = 任务生命周期；子代理事件 = 并行任务清单；错峰任务（Off-Peak Tasks）/远程控制的状态可轮询本地痕迹（待验证）；
-- `report.js` 扩展：把 hook 事件追加写入 `~/.z-buddy/events.jsonl`，气泡读它渲染；
+- **通道 A · hooks 事件流**：`report.mjs` 把 7 种 hook 事件追加写入 `~/.z-buddy/events.jsonl`（实时性）；
+- **通道 B · ZCode 本地任务库**（Phase 0 发现）：`D:/ZcodeData/.zcode/v2/tasks-index.sqlite`（WAL 模式可直读）含 `off_peak_tasks`（完整生命周期：status/queue_position/session_id…）、`automations`（cron 任务）、`automation_runs`、`tasks` 等表——**权威状态源**，覆盖错峰任务/自动化任务/任务历史，hooks 管道之外的部分全靠它；
 - 每行内容：名称（目标摘要）、状态（排队/执行中/等待审批/完成/失败）、最新动作（最近一次 PreToolUse 摘要）、已用时。
 
 **生态对照**：Codex 桌宠只有状态动画、无任务面板；clawd 有审批卡片、无任务列表——**这种"悬停查任务"的 UI 在两个生态里都罕见**，成本低（hover + 列表渲染是普通前端活）但感知价值高，性价比突出。
@@ -581,6 +582,8 @@ ZCode 的插件体系与 Claude Code 兼容：
 | D9 | 版权红线 | 自带宠物全原创；格式兼容可以、渠道内容必须审核 | Petdex 大量 IP 形象不可跟进 | 第 9 节风险 1 |
 
 ### 10.2 待决问题（Open Questions → Phase 0 验证清单的来源）
+
+> **✅ Phase 0 更新（2026-09-06）：Q1-Q7 全部有着落，无一项卡死。** 实验过程与数据见 [phase-0-技术验证总结](notes/phase/phase-0-技术验证总结.md)。要点：Q1 七事件确认（且发现官方原生打断信号 `is_interrupt`）；Q2 暂停机制 hook deny 实测闭环；Q3 打断自愈实测符合预测；Q5 发现本机 `tasks-index.sqlite` 任务库；Q7 定稿 Tauri（30.6MB vs Electron 334.9MB）。
 
 | # | 问题 | 影响哪个功能 | 验证方式 |
 |---|---|---|---|

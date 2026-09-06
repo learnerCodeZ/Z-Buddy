@@ -23,3 +23,8 @@ desktop.ini
 # IDE
 .idea/
 .vscode/
+
+# Lab experiment deps
+lab/electron-demo/node_modules/
+lab/tauri-demo/node_modules/
+lab/tauri-demo/src-tauri/target/
