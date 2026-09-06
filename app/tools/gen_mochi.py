@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""生成 Z-Buddy 首只原创宠物「团子 Mochi」的精灵图集。
+"""生成 Z-Buddy 原创宠物「团子」系的精灵图集。
 
 图集规格（兼容 Codex hatch-pet 思路：每一"行"是一个语义状态，横向分帧）：
   64x64 帧，4 列 x 4 行，RGBA PNG
@@ -8,7 +8,9 @@
   行 2 error    沮丧抖动（X 眼 + 汗滴）
   行 3 sleep    睡觉（闭眼 + Zzz）
 
-用法：python gen_mochi.py <输出目录>
+用法：python gen_mochi.py <输出目录> [身体色hex] [肚皮色hex] [描边色hex] [高光色hex]
+缺省配色 = 团子（橙）。示例（抹茶绿）：
+  python gen_mochi.py ~/.z-buddy/pets/matcha 7ac74f c6e2aa 4a6e30 a8d98a
 """
 
 import sys
@@ -18,13 +20,27 @@ CELL = 32          # 逻辑画布 32x32，2x 放大到 64x64 成品帧
 SCALE = 2
 COLS, ROWS = 4, 4
 
-BODY = (255, 159, 67, 255)        # 主色橙
-BODY_HI = (255, 201, 120, 255)    # 高光
-BELLY = (255, 217, 168, 255)      # 肚皮
-OUTLINE = (150, 82, 22, 255)      # 描边
+
+def hx(s):
+    s = s.lstrip("#")
+    return tuple(int(s[i:i + 2], 16) for i in (0, 2, 4)) + (255,)
+
+
+def main(outdir, body_s="ff9f43", belly_s="ffd9a8", outline_s="965216", hi_s="ffc978"):
+    global BODY, BELLY, OUTLINE, BODY_HI
+    BODY, BELLY, OUTLINE, BODY_HI = hx(body_s), hx(belly_s), hx(outline_s), hx(hi_s)
+    EYE = (47, 53, 66, 255)
+    SWEAT = (116, 185, 255, 255)
+    ZZZ = (223, 230, 233, 255)
+
+
 EYE = (47, 53, 66, 255)           # 眼睛
 SWEAT = (116, 185, 255, 255)      # 汗滴
 ZZZ = (223, 230, 233, 255)        # Zzz
+BODY = (255, 159, 67, 255)        # 主色（main 里按参数覆盖）
+BODY_HI = (255, 201, 120, 255)    # 高光
+BELLY = (255, 217, 168, 255)      # 肚皮
+OUTLINE = (150, 82, 22, 255)      # 描边
 
 
 def px(d, x, y, color):
@@ -120,7 +136,9 @@ def draw_frame(d, row, col):
             d.rectangle((zx + 3, zy - 3, zx + 4, zy - 2), fill=ZZZ)
 
 
-def main(outdir):
+def main(outdir, body_s="ff9f43", belly_s="ffd9a8", outline_s="965216", hi_s="ffc978"):
+    global BODY, BELLY, OUTLINE, BODY_HI
+    BODY, BELLY, OUTLINE, BODY_HI = hx(body_s), hx(belly_s), hx(outline_s), hx(hi_s)
     atlas = Image.new("RGBA", (CELL * COLS * SCALE, CELL * ROWS * SCALE), (0, 0, 0, 0))
     for row in range(ROWS):
         for col in range(COLS):
@@ -134,4 +152,5 @@ def main(outdir):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else ".")
+    args = sys.argv[1:]
+    main(args[0] if args else ".", *(args[1:5]))

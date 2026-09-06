@@ -21,6 +21,29 @@ fn z_buddy_dir() -> PathBuf {
     PathBuf::from(home).join(".z-buddy")
 }
 
+/// 扫描外部宠物包：~/.z-buddy/pets/<名>/pet.json 存在即为合法包
+#[tauri::command]
+fn list_external_pets() -> Vec<serde_json::Value> {
+    let mut out = Vec::new();
+    let dir = z_buddy_dir().join("pets");
+    if let Ok(entries) = fs::read_dir(&dir) {
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_dir() && p.join("pet.json").is_file() {
+                let name = p
+                    .file_name()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                out.push(serde_json::json!({
+                    "name": name,
+                    "dir": p.to_string_lossy(),
+                }));
+            }
+        }
+    }
+    out
+}
+
 /// 读取插件写入的状态快照；paused 字段以 pause 文件实时状态为准
 /// （state.json 只在 hook 事件到来时刷新，直接信它会回退 UI）
 #[tauri::command]
@@ -96,7 +119,12 @@ fn spawn_clickthrough(app: tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![read_state, set_pause, set_dragging])
+        .invoke_handler(tauri::generate_handler![
+            read_state,
+            set_pause,
+            set_dragging,
+            list_external_pets
+        ])
         .setup(|app| {
             // 桌宠出生在主屏右下角（按窗口实际物理尺寸计算，适配任意 DPI 缩放）
             if let Some(win) = app.get_webview_window("main") {
