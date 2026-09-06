@@ -8,14 +8,14 @@ body {
 
 #wrap {
   position: relative;
-  width: 160px;
+  width: 240px;
   height: 300px;
 }
 
 /* ---- 宠物本体（精灵图画布）---- */
 #pet {
   position: absolute;
-  left: 16px;
+  left: 56px;
   top: 159px;
   width: 128px;
   height: 128px;
@@ -79,8 +79,7 @@ body {
   bottom: 150px;
   left: 50%;
   transform: translateX(-50%) translateY(6px);
-  min-width: 168px;
-  max-width: 230px;
+  width: 224px;
   padding: 10px 12px;
   border-radius: 12px;
   background: #2f3542ee;

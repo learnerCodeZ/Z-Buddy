@@ -72,7 +72,41 @@ async function tick() {
   }
 }
 
+// ---- 拖动（手动触发原生拖拽，位移阈值区分“拖”与“点”）----
+// 不能依赖 data-tauri-drag-region：它与点击穿透守护互相打架（拖动瞬间
+// 光标移出矩形 → 穿透被打开 → 原生拖拽夭折）。
+// 关键：mousedown 瞬间就 set_dragging(true)（不等位移阈值）——
+// 否则快速拖动会在守护线程 200ms 一帧内光标已出矩形，穿透提前打开。
+let downPos = null;
+let moved = false;
+
+pet.addEventListener("mousedown", (e) => {
+  if (e.button !== 0) return;
+  downPos = { x: e.clientX, y: e.clientY };
+  moved = false;
+  invoke("set_dragging", { on: true });
+});
+
+window.addEventListener("mousemove", (e) => {
+  if (!downPos || moved) return;
+  if (Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 6) {
+    moved = true;
+    invoke("plugin:window|start_dragging");
+  }
+});
+
+window.addEventListener("mouseup", () => {
+  if (downPos) {
+    invoke("set_dragging", { on: false });
+  }
+  downPos = null;
+});
+
 pet.addEventListener("click", async () => {
+  if (moved) {
+    moved = false; // 拖动结束产生的 click：不算点击，不切换暂停
+    return;
+  }
   paused = !paused;
   await invoke("set_pause", { on: paused });
   tick();

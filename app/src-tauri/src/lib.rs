@@ -6,8 +6,13 @@
 
 use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::Manager;
+
+/// 拖动进行中标记：拖动期间点击穿透守护必须闭嘴，
+/// 否则光标移出宠物矩形瞬间穿透被打开，原生拖拽当场夭折。
+static DRAGGING: AtomicBool = AtomicBool::new(false);
 
 fn z_buddy_dir() -> PathBuf {
     let home = std::env::var("USERPROFILE")
@@ -47,21 +52,42 @@ fn set_pause(on: bool) -> bool {
     }
 }
 
+/// 前端在开始原生拖拽前置 true、结束后置 false
+#[tauri::command]
+fn set_dragging(on: bool) {
+    DRAGGING.store(on, Ordering::SeqCst);
+}
+
 /// 点击穿透守护：光标不在宠物本体（交互区）时，把窗口设为穿透，
 /// 避免上方透明区域（悬停卡预留区）挡住身后内容的点击。
-/// MVP 交互区 = 宠物本体矩形（CSS 空间 10..150 x, 155..295 y）；
-/// 悬停卡暂不含在内（卡片纯展示）。
+/// 交互区 = 宠物本体矩形（CSS 空间 50..190 x, 155..295 y，窗口宽 240）；
+/// 拖动进行中强制保持可交互。
+/// 物理左键是否按着（按钮按下期间穿透守护绝不动手，物理上覆盖所有拖拽手势）
+#[cfg(windows)]
+fn left_button_held() -> bool {
+    use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
+    // VK_LBUTTON = 0x01；高位置 1 表示按下
+    (unsafe { GetAsyncKeyState(0x01i32) } & 0x8000u16 as i16) != 0
+}
+#[cfg(not(windows))]
+fn left_button_held() -> bool {
+    false
+}
+
 fn spawn_clickthrough(app: tauri::AppHandle) {
     std::thread::spawn(move || loop {
         std::thread::sleep(std::time::Duration::from_millis(200));
         let Some(win) = app.get_webview_window("main") else { continue };
+        if DRAGGING.load(Ordering::SeqCst) || left_button_held() {
+            let _ = win.set_ignore_cursor_events(false);
+            continue;
+        }
         let Ok(cur) = app.cursor_position() else { continue };
         let Ok(wpos) = win.outer_position() else { continue };
-        let Ok(wsize) = win.outer_size() else { continue };
         let scale = win.scale_factor().unwrap_or(1.0);
         let lx = (cur.x - wpos.x as f64) / scale;
         let ly = (cur.y - wpos.y as f64) / scale;
-        let interactive = lx >= 10.0 && lx <= 150.0 && ly >= 155.0 && ly <= 295.0;
+        let interactive = lx >= 50.0 && lx <= 190.0 && ly >= 155.0 && ly <= 295.0;
         let _ = win.set_ignore_cursor_events(!interactive);
     });
 }
@@ -70,7 +96,7 @@ fn spawn_clickthrough(app: tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![read_state, set_pause])
+        .invoke_handler(tauri::generate_handler![read_state, set_pause, set_dragging])
         .setup(|app| {
             // 桌宠出生在主屏右下角（按窗口实际物理尺寸计算，适配任意 DPI 缩放）
             if let Some(win) = app.get_webview_window("main") {
