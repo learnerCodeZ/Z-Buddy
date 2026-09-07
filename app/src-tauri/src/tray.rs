@@ -10,24 +10,22 @@ use crate::WEBSITE_URL;
 pub fn init(app: &tauri::AppHandle) -> tauri::Result<()> {
     let open_main_item =
         MenuItem::with_id(app, "open_main", "打开主界面", true, None::<&str>)?;
+    let open_site = MenuItem::with_id(app, "open_site", "打开官方网站", true, None::<&str>)?;
     let sep1 = tauri::menu::PredefinedMenuItem::separator(app)?;
     let show_hide =
         MenuItem::with_id(app, "show_hide", "显示 / 隐藏宠物", true, None::<&str>)?;
     let next_pet = MenuItem::with_id(app, "next_pet", "切换宠物", true, None::<&str>)?;
     let sep2 = tauri::menu::PredefinedMenuItem::separator(app)?;
-    let open_site = MenuItem::with_id(app, "open_site", "打开官方网站", true, None::<&str>)?;
-    let sep3 = tauri::menu::PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "退出 Z-Buddy", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[
             &open_main_item,
+            &open_site,
             &sep1,
             &show_hide,
             &next_pet,
             &sep2,
-            &open_site,
-            &sep3,
             &quit,
         ],
     )?;
