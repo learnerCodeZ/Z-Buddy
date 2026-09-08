@@ -82,7 +82,8 @@ pub fn run() {
             commands::autostart_enabled,
             commands::autostart_set,
             commands::open_external,
-            commands::popup_pet_menu
+            commands::popup_pet_menu,
+            commands::open_local_dir
         ])
         // 宠物右键菜单（popup_pet_menu 弹出的 pet_* 项）走这里
         .on_menu_event(|app, event| match event.id().as_ref() {

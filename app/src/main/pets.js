@@ -1,4 +1,4 @@
-// 宠物管理页：内置 + 外部包网格卡，点击即切换
+// 宠物管理页：内置 + 外部包网格卡，点击即切换 + 加号添加自定义包
 import { convertFileSrc, invoke, listen } from "../shared/api.js";
 import { loadBundledManifest } from "../shared/pack.js";
 
@@ -48,6 +48,21 @@ async function render() {
       };
       atlas.src = pack.atlasUrl;
     }
+
+    // 加号卡片：点击打开 ~/.z-buddy/pets/ 目录
+    const addCard = document.createElement("div");
+    addCard.className = "pet-card add-card";
+    addCard.innerHTML = `
+      <div class="add-icon">＋</div>
+      <div>添加自定义宠物</div>
+      <div class="tag">放入 atlas.png + pet.json</div>
+    `;
+    addCard.onclick = () => {
+      const home = navigator.userAgent.includes("Windows")
+        ? navigator.userAgent.match(/Users\\([^\\]+)/)?.[1] || "" : "";
+      invoke("open_local_dir", { dir: `C:\\Users\\${home}\\.z-buddy\\pets` });
+    };
+    grid.appendChild(addCard);
   } catch (err) {
     grid.textContent = "加载失败：" + String(err);
   }

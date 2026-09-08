@@ -164,6 +164,15 @@ pub fn open_external(app: tauri::AppHandle, url: String) {
     let _ = app.opener().open_url(url, None::<&str>);
 }
 
+// ---- 打开本地目录 ----
+
+#[tauri::command]
+pub fn open_local_dir(dir: String) {
+    use tauri_plugin_opener::OpenerExt;
+    // 用 opener 打开系统文件管理器指向该目录
+    let _ = std::process::Command::new("explorer").arg(&dir).spawn();
+}
+
 // ---- 宠物右键菜单 ----
 
 #[tauri::command]

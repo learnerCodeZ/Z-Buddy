@@ -115,6 +115,22 @@ code { background: #ffffff14; padding: 1px 5px; border-radius: 4px; }
 .pet-card.on { border-color: var(--accent); }
 .pet-card canvas { width: 96px; height: 96px; image-rendering: pixelated; }
 .pet-card .tag { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+.add-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 170px;
+  border: 2px dashed #57606f;
+}
+.add-card:hover { border-color: var(--accent); background: #ffffff14; }
+.add-icon {
+  font-size: 36px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  font-weight: 300;
+}
+.add-card:hover .add-icon { color: var(--accent); }
 
 /* ---- 活动时间线 ---- */
 #act-filters { margin-bottom: 10px; }
