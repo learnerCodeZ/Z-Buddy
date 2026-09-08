@@ -65,6 +65,12 @@ const faqs = [
 ---
 
 <BaseLayout>
+  <!-- 公告条（仅首页） -->
+  <div class="bg-[#101012] px-4 py-2 text-center text-xs text-white/90 sm:text-sm">
+    🎉 v{SITE.version} 发布：状态联动 · 点按暂停 · 宠物包加载 ——
+    <a href={`${bp}/changelog/`} class="underline underline-offset-2 hover:text-white">看更新了什么</a>
+  </div>
+
   <!-- ① Hero -->
   <section class="relative overflow-hidden">
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,rgba(0,113,227,0.07),transparent)]"></div>

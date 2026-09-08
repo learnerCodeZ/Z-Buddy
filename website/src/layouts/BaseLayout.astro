@@ -48,28 +48,56 @@ const ogImage = withBase('og.png');
     <meta name="generator" content={Astro.generator} />
   </head>
   <body class="bg-surface font-sans text-ink antialiased">
-    <!-- 公告条（对齐 ZCode 官网；两种主题下都保持深底白字） -->
-    <div class="bg-[#101012] px-4 py-2 text-center text-xs text-white/90 sm:text-sm">
-      🎉 v{SITE.version} 发布：状态联动 · 点按暂停 · 宠物包加载 ——
-      <a href={`${bp}/changelog/`} class="underline underline-offset-2 hover:text-white">看更新了什么</a>
-    </div>
-
-    <!-- 顶部导航 -->
+    <!-- 顶部导航（对齐 ZCode Docs：左 Logo+链接 | 中搜索 | 右语言+下载） -->
     <header class="sticky top-0 z-50 border-b border-hairline bg-surface/80 backdrop-blur">
-      <nav class="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <a href={bp + '/'} class="flex items-center gap-2 font-semibold">
+      <nav class="mx-auto flex h-14 max-w-[1440px] items-center px-4 sm:px-6">
+        <!-- 左：Logo + 文档/更新日志 -->
+        <a href={bp + '/'} class="mr-6 flex shrink-0 items-center gap-2 font-semibold">
           <img src={withBase('pets/mochi-idle.webp')} alt="" class="pixelated h-7 w-7" />
           <span>Z-Buddy</span>
         </a>
-        <div class="hidden items-center gap-7 text-sm text-ink-2 md:flex">
-          {nav.map((n) => <a href={n.href} class="transition-colors hover:text-ink">{n.label}</a>)}
+        <div class="mr-8 hidden items-center gap-5 text-sm text-ink-2 md:flex">
+          <a href={`${bp}/docs/quick-start/`} class:list={[
+            'transition-colors hover:text-ink',
+            Astro.url.pathname.startsWith('/Z-Buddy/docs/') ? 'font-medium text-ink' : ''
+          ]}>文档</a>
+          <a href={`${bp}/changelog/`} class:list={[
+            'transition-colors hover:text-ink',
+            Astro.url.pathname.startsWith('/Z-Buddy/changelog/') ? 'font-medium text-ink' : ''
+          ]}>更新日志</a>
+          <a href={`${bp}/gallery/`} class:list={[
+            'transition-colors hover:text-ink',
+            Astro.url.pathname.startsWith('/Z-Buddy/gallery/') ? 'font-medium text-ink' : ''
+          ]}>宠物画廊</a>
           <a href={SITE.repo} class="transition-colors hover:text-ink" target="_blank" rel="noopener">GitHub</a>
         </div>
-        <div class="flex items-center gap-3">
+
+        <!-- 中：搜索框（flex-1 居中） -->
+        <div class="relative hidden flex-1 items-center justify-center md:flex">
+          <svg class="absolute left-3 h-4 w-4 text-ink-2/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input
+            type="text"
+            id="doc-search"
+            placeholder="搜索文档… ⌘K"
+            class="h-8 w-52 rounded-lg border border-hairline bg-soft/50 pl-9 pr-3 text-xs text-ink placeholder-ink-2/50 transition-all focus:w-72 focus:border-zblue focus:outline-none focus:ring-1 focus:ring-zblue/30"
+            readonly
+          />
+        </div>
+
+        <!-- 右：语言切换 + 主题 + 下载 -->
+        <div class="flex shrink-0 items-center gap-2">
+          <button
+            id="lang-toggle"
+            aria-label="切换语言"
+            class="flex h-8 items-center gap-1 rounded-full border border-hairline px-2.5 text-xs font-medium text-ink-2 transition-colors hover:bg-soft hover:text-ink"
+          >
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            <span>中文</span>
+          </button>
           <button
             id="theme-toggle"
             aria-label="切换深色 / 浅色主题"
-            class="flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-ink transition-colors hover:bg-soft"
+            class="flex h-8 w-8 items-center justify-center rounded-full border border-hairline text-ink transition-colors hover:bg-soft"
           >
             <svg class="h-4 w-4 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
             <svg class="hidden h-4 w-4 dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>

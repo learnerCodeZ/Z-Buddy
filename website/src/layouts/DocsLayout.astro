@@ -1,9 +1,8 @@
 ---
 import BaseLayout from './BaseLayout.astro';
-import { SITE, withBase } from '../data/site';
+import { SITE } from '../data/site';
 
 interface Props {
-  // Markdown 页面的 layout 收到的是 frontmatter 整包，而不是解构后的 title
   frontmatter?: { title?: string; description?: string };
   title?: string;
   description?: string;
@@ -13,49 +12,124 @@ const {
   description = Astro.props.frontmatter?.description,
 } = Astro.props;
 const bp = import.meta.env.BASE_URL;
+const pathname = Astro.url.pathname;
 
-const links = [
+const liveLinks = [
   { href: `${bp}/docs/quick-start/`, label: '快速开始' },
   { href: `${bp}/docs/faq/`, label: 'FAQ / 故障排查' },
 ];
-const soon = ['安装指南', '使用指南', '宠物包规范 v1', '架构与隐私'];
+const soonItems = ['安装指南', '使用指南', '宠物包规范 v1', '架构与隐私'];
+
+function active(href: string) {
+  return pathname === href || (pathname + '/') === href;
+}
 ---
 
 <BaseLayout title={`${title} · ${SITE.name}`} description={description}>
-  <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-    <div class="grid gap-10 md:grid-cols-[200px_1fr]">
-      <!-- 侧边栏 -->
-      <aside class="md:border-r md:border-hairline md:pr-6">
-        <p class="text-sm font-semibold">文档</p>
-        <nav class="mt-3 flex flex-row flex-wrap gap-x-4 gap-y-2 text-sm md:flex-col md:flex-nowrap">
-          {links.map((l) => (
-            <a href={l.href} class:list={['rounded-md px-2 py-1 -mx-2', Astro.url.pathname === l.href || (Astro.url.pathname + '/') === l.href ? 'bg-soft font-medium text-ink' : 'text-ink-2 hover:text-ink']}>
+  <!-- 文档子导航 -->
+  <div class="border-b border-hairline bg-surface">
+    <div class="mx-auto flex max-w-[1440px] items-center gap-1 px-4 sm:px-6">
+      <a href={`${bp}/docs/quick-start/`}
+         class:list={['px-4 py-3 text-sm font-medium transition-colors',
+                      pathname.startsWith('/Z-Buddy/docs/') ? 'text-ink border-b-2 border-ink' : 'text-ink-2 hover:text-ink']}>
+        文档
+      </a>
+      <a href={`${bp}/changelog/`}
+         class:list={['px-4 py-3 text-sm font-medium transition-colors',
+                      pathname.startsWith('/Z-Buddy/changelog/') ? 'text-ink border-b-2 border-ink' : 'text-ink-2 hover:text-ink']}>
+        更新日志
+      </a>
+    </div>
+  </div>
+
+  <!-- 三栏布局 -->
+  <div class="mx-auto flex max-w-[1440px]">
+    <!-- 左导航（固定 220px） -->
+    <aside class="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[220px] shrink-0 overflow-y-auto border-r border-hairline px-5 py-6 xl:block">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-2/70">快速上手</p>
+      <nav class="space-y-0.5">
+        {liveLinks.map(l => (
+          <a href={l.href}
+             class:list={['block rounded-md px-3 py-1.5 text-sm transition-colors',
+                          active(l.href) ? 'bg-zblue/10 font-medium text-zblue' : 'text-ink-2 hover:bg-soft hover:text-ink']}>
+            {l.label}
+          </a>
+        ))}
+        {soonItems.map(s => (
+          <span class="block px-3 py-1.5 text-sm text-ink-2/40" title="撰写中">{s}</span>
+        ))}
+      </nav>
+      <p class="mt-6 border-t border-hairline pt-4 text-xs leading-5 text-ink-2">
+        适用版本 v0.1.x<br />
+        <a class="text-zblue underline underline-offset-2"
+           href="https://github.com/learnerCodeZ/Z-Buddy/tree/main/website"
+           target="_blank" rel="noopener">在 GitHub 改进此文档</a>
+      </p>
+    </aside>
+
+    <!-- 正文区（max-w 使内容居中于两侧等宽侧栏之间） -->
+    <article class="doc mx-auto min-w-0 max-w-[760px] flex-1 px-8 py-8 xl:px-10">
+      <details class="mb-6 xl:hidden">
+        <summary class="cursor-pointer text-sm font-medium text-ink-2">目录导航</summary>
+        <nav class="mt-3 space-y-0.5">
+          {liveLinks.map(l => (
+            <a href={l.href}
+               class:list={['block rounded-md px-3 py-1.5 text-sm',
+                            active(l.href) ? 'bg-zblue/10 font-medium text-zblue' : 'text-ink-2 hover:bg-soft']}>
               {l.label}
             </a>
           ))}
-          {soon.map((s) => (
-            <span class="cursor-not-allowed px-2 py-1 -mx-2 text-ink-2/50" title="撰写中">{s}（撰写中）</span>
+          {soonItems.map(s => (
+            <span class="block px-3 py-1.5 text-sm text-ink-2/40">{s}</span>
           ))}
         </nav>
-        <p class="mt-6 hidden text-xs leading-5 text-ink-2 md:block">
-          适用版本 v0.1.x<br />
-          <a class="text-zblue underline underline-offset-2" href="https://github.com/learnerCodeZ/Z-Buddy/tree/main/website" target="_blank" rel="noopener">在 GitHub 改进此文档</a>
-        </p>
-      </aside>
+      </details>
+      <slot />
+    </article>
 
-      <!-- 正文 -->
-      <article class="doc max-w-3xl min-w-0">
-        <slot />
-      </article>
-    </div>
+    <!-- 右 TOC（固定 220px，与左导航等宽，正文因此居中） -->
+    <aside id="toc" class="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[220px] shrink-0 overflow-y-auto border-l border-hairline px-4 py-6 xl:block">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-2/70">本页目录</p>
+      <nav id="toc-list" class="space-y-1 text-sm"></nav>
+    </aside>
   </div>
 </BaseLayout>
 
-<style is:global>
-  /* 组件样式块与 Tailwind 主样式是两个编译上下文，@apply 前必须 @reference */
-  @reference "../styles/global.css";
+<!-- TOC 自动生成：扫描正文 h2/h3，动态填充右侧 -->
+<script is:inline>
+  (function buildTOC() {
+    var list = document.getElementById('toc-list');
+    var doc = document.querySelector('.doc');
+    if (!list || !doc) return;
+    list.innerHTML = '';
+    var headings = doc.querySelectorAll('h2, h3');
+    headings.forEach(function (h, i) {
+      if (!h.id) h.id = 'section-' + i;
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent || '';
+      a.className = h.tagName === 'H3'
+        ? 'block py-1 pl-4 text-ink-2 hover:text-ink transition-colors'
+        : 'block py-1 text-ink-2 hover:text-ink transition-colors font-medium';
+      a.dataset.target = h.id;
+      list.appendChild(a);
+    });
+    var links = list.querySelectorAll('a');
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        var link = list.querySelector('a[data-target="' + e.target.id + '"]');
+        if (link) {
+          link.classList.toggle('text-zblue', e.isIntersecting);
+          link.classList.toggle('text-ink-2', !e.isIntersecting);
+        }
+      });
+    }, { rootMargin: '-80px 0px -75% 0px' });
+    headings.forEach(function (h) { observer.observe(h); });
+  })();
+</script>
 
-  /* 文档正文排版（不引 typography 插件，手写够用的 prose 样式） */
+<style is:global>
+  @reference "../styles/global.css";
   .doc h1 { @apply text-3xl font-bold tracking-tight; }
   .doc h2 { @apply mt-10 border-b border-hairline pb-2 text-xl font-bold; }
   .doc h3 { @apply mt-6 text-base font-semibold; }
