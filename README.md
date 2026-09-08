@@ -78,7 +78,7 @@
 - [clawd-on-desk](https://github.com/rullerzhou-afk/clawd-on-desk) —— 通用 Agent 桌宠（本项目的架构参考与敬意来源）
 - [ZCode](https://zcode.z.ai/) / [GLM](https://bigmodel.cn/) —— 本项目依托的编程工具与模型
 
-> ⚠️ Z-Buddy 是独立的个人开源项目，与 Z.ai / 智谱无隶属关系。
+> ⚠️ Z-Buddy 是独立的个人开源项目，与 Z.ai / 智谱无隶属关系。[完整声明](https://learnercodez.github.io/Z-Buddy/Z-Buddy/docs/disclaimer/)
 
 ## License
 
