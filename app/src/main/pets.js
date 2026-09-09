@@ -1,6 +1,6 @@
 // 宠物管理页：内置 + 外部包网格卡，点击即切换 + 加号添加自定义包
 import { convertFileSrc, invoke, listen } from "../shared/api.js";
-import { loadBundledManifest, loadExternalManifest } from "../shared/pack.js";
+import { loadBundledManifest, loadExternalByDir } from "../shared/pack.js";
 
 const grid = document.querySelector("#pets-grid");
 

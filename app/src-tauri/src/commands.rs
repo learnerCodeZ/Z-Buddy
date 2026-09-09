@@ -67,14 +67,17 @@ pub fn list_external_pets() -> Vec<serde_json::Value> {
 #[tauri::command]
 pub fn list_all_pets() -> Vec<serde_json::Value> {
     let pref = get_pet_pref();
+    const BUNDLED: &[&str] = &["mochi", "bsod", "fireball"];
+    let mut seen = std::collections::HashSet::new();
     pet_list()
         .into_iter()
+        .filter(|name| seen.insert(name.clone()))
         .map(|name| {
-            let source = if name == "mochi" { "bundled" } else { "external" };
+            let is_bundled = BUNDLED.contains(&name.as_str());
             json!({
                 "name": name,
-                "source": source,
-                "dir": if source == "external" {
+                "source": if is_bundled { "bundled" } else { "external" },
+                "dir": if !is_bundled {
                     z_buddy_dir().join("pets").join(&name).to_string_lossy().to_string()
                 } else {
                     "".to_string()
