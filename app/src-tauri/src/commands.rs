@@ -101,7 +101,8 @@ pub fn get_pet_pref_cmd() -> String {
 #[tauri::command]
 pub fn set_pet_pref_cmd(app: tauri::AppHandle, name: String) -> bool {
     write_app_key("pet", json!(name));
-    let _ = app.emit("pet-changed", name);
+    // 广播到所有窗口（pet 窗和 main 窗）
+    let _ = app.emit("pet-changed", &name);
     true
 }
 

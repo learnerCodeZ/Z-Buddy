@@ -40,7 +40,17 @@ export async function bootDashboard() {
   setInterval(tick, 600);
 }
 
-export function refreshDashboard() {
+export async function refreshDashboard() {
+  // 宠物切换后重载精灵图
+  try {
+    const pref = await invoke("get_pet_pref_cmd");
+    const pack = await loadPackByPref(pref);
+    const canvas = document.querySelector("#dash-canvas");
+    const atlas = new Image();
+    atlas.src = pack.atlasUrl;
+    animator = new SpriteAnimator(canvas, atlas, pack.manifest);
+    animator.start();
+  } catch {}
   tick();
 }
 

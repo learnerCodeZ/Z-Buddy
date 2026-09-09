@@ -42,13 +42,17 @@ export async function loadExternalByDir(dir) {
   };
 }
 
-/** 按偏好加载：pref 为 "mochi" 走内置，其余尝试外部包，失败回退内置 */
+/** 按偏好加载：内置名字优先走 loadBundledManifest，其余先尝试外部包，失败回退内置 */
 export async function loadPackByPref(pref) {
-  if (pref && pref !== "mochi") {
-    const ext = await loadExternalManifest(pref);
-    if (ext) return ext;
+  const BUNDLED = ["mochi", "bsod", "fireball"];
+  if (BUNDLED.includes(pref)) {
+    return loadBundledManifest(pref);
   }
-  return loadBundledManifest();
+  // 外部包
+  const ext = await loadExternalManifest(pref);
+  if (ext) return ext;
+  // 失败回退默认
+  return loadBundledManifest("mochi");
 }
 
 /** 精灵图动画器：bind 到 canvas，按状态名推帧（imageSmoothing 关闭保像素风） */

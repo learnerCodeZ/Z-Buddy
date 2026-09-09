@@ -26,7 +26,9 @@ let animator = new SpriteAnimator(canvas, atlas, pack.manifest);
 animator.start();
 
 // 监听宠物切换事件（主界面/托盘/右键切换后热加载）
+console.log("[z-buddy-pet] 注册 pet-changed 监听器，listen =", typeof listen);
 listen("pet-changed", async (e) => {
+  console.log("[z-buddy-pet] pet-changed 事件收到:", e.payload);
   const newPref = e.payload;
   if (newPref === currentPref) return;
   currentPref = newPref;
