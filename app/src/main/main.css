@@ -41,6 +41,16 @@ body {
 }
 #tb-actions button:hover { background: #ffffff22; }
 #tb-close:hover { background: #e74c3c !important; }
+#tb-update {
+  background: #27ae60 !important; color: #fff !important;
+  font-size: 12px; padding: 2px 10px; border-radius: 6px;
+  animation: update-pulse 2s ease-in-out infinite;
+}
+#tb-update:hover { background: #2ecc71 !important; }
+@keyframes update-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
 
 /* ---- 布局 ---- */
 #layout {

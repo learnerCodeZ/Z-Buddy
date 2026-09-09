@@ -20,13 +20,24 @@ export async function loadExternalManifest(name) {
   }
 }
 
-/** 内置团子 */
-export async function loadBundledManifest() {
-  const manifest = await (await fetch("/pets/mochi/pet.json")).json();
+/** 内置宠物（mochi/bsod/fireball，atlas 在 /pets/<名>/ 下，dev 模式由 vite serve） */
+export async function loadBundledManifest(name = "mochi") {
+  const manifest = await (await fetch(`/pets/${name}/pet.json`)).json();
   return {
     manifest,
-    atlasUrl: "/pets/mochi/atlas.png",
+    atlasUrl: `/pets/${name}/atlas.png`,
     source: "bundled",
+    title: manifest.title || manifest.name,
+  };
+}
+
+/** 按目录加载外部包（list_all_pets 返回的 dir） */
+export async function loadExternalByDir(dir) {
+  const manifest = await (await fetch(convertFileSrc(`${dir}/pet.json`))).json();
+  return {
+    manifest,
+    atlasUrl: convertFileSrc(`${dir}/atlas.png`),
+    source: "external",
     title: manifest.title || manifest.name,
   };
 }

@@ -6,6 +6,14 @@
   "build": {
     "frontendDist": "../src"
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/learnerCodeZ/Z-Buddy/releases/latest/download/latest.json"
+      ],
+      "pubkey": "BS1USL01R8dv04HtUP4DoQnA4soEcGcEKCuwveIn73E="
+    }
+  },
   "app": {
     "withGlobalTauri": true,
     "windows": [

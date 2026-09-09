@@ -19,6 +19,20 @@ document.querySelectorAll(".nav").forEach((btn) => {
 document.querySelector("#tb-min").onclick = () => invoke("plugin:window|minimize");
 document.querySelector("#tb-close").onclick = () => window.close();
 
+// ---- 更新按钮：启动时后台检查，有新版本才显示；点击下载安装并重启 ----
+const updateBtn = document.querySelector("#tb-update");
+invoke("check_update").then((info) => {
+  if (info.available) {
+    updateBtn.style.display = "";
+    updateBtn.title = `v${info.version} 可用`;
+    updateBtn.onclick = async () => {
+      updateBtn.textContent = "⬇️ 下载中…";
+      updateBtn.disabled = true;
+      await invoke("install_update");
+    };
+  }
+}).catch(() => {}); // 网络不通静默跳过
+
 // ---- 装配各页 ----
 bootDashboard();
 bootPets();

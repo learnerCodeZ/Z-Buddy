@@ -232,3 +232,10 @@ pub fn read_events_total() -> usize {
         .map(|t| t.lines().count())
         .unwrap_or(0)
 }
+
+// ---- 应用更新（暂未启用，待 tauri-plugin-updater 稳定后放开）----
+//
+// #[tauri::command]
+// pub async fn check_update(app: tauri::AppHandle) -> serde_json::Value { ... }
+// #[tauri::command]
+// pub async fn install_update(app: tauri::AppHandle) -> String { ... }

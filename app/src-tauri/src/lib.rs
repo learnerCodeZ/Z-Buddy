@@ -66,6 +66,7 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        // .plugin(tauri_plugin_updater::Builder::new().build())  // TODO: 待 Tauri updater 稳定后启用（当前版本 schema 报错）
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::read_state,

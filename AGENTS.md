@@ -201,6 +201,7 @@ git push                                    # 推送（需要 Clash/VPN 开着�
 |---|---|
 | [`docs/dev-extensions.md`](docs/dev-extensions.md) | ZCode 三种扩展机制详解（插件/MCP/Skills + Hooks 详解与示例） |
 | [`docs/ui-design.md`](docs/ui-design.md) | 主界面设计规范（窗口尺寸、色板、信息架构、分期） |
+| [`docs/update-design.md`](docs/update-design.md) | 应用自动更新机制（GitHub Releases + ed25519 签名 + 标题栏按钮） |
 | [`docs/decisions/tech-validation.md`](docs/decisions/tech-validation.md) | Phase 0 技术验证决策（hooks 事件表、暂停机制、框架选型） |
 | [`docs/decisions/ui-refactor.md`](docs/decisions/ui-refactor.md) | 主界面实施记录（双窗架构拆分、踩坑档案） |
 
