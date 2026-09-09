@@ -167,13 +167,23 @@ pub fn open_external(app: tauri::AppHandle, url: String) {
     let _ = app.opener().open_url(url, None::<&str>);
 }
 
-// ---- 打开本地目录 ----
+// ---- 宠物目录与打开 ----
+
+/// 返回 ~/.z-buddy/pets 路径
+#[tauri::command]
+pub fn get_pets_dir() -> String {
+    z_buddy_dir().join("pets").to_string_lossy().to_string()
+}
 
 #[tauri::command]
 pub fn open_local_dir(dir: String) {
-    use tauri_plugin_opener::OpenerExt;
-    // 用 opener 打开系统文件管理器指向该目录
-    let _ = std::process::Command::new("explorer").arg(&dir).spawn();
+    // Windows explorer 需要末尾反斜杠才能识别为文件夹
+    let normalized = if std::path::Path::new(&dir).is_dir() {
+        if dir.ends_with('\\') || dir.ends_with('/') { dir } else { format!("{}\\", dir) }
+    } else {
+        dir
+    };
+    let _ = std::process::Command::new("explorer").arg(&normalized).spawn();
 }
 
 // ---- 宠物右键菜单 ----

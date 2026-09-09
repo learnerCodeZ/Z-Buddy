@@ -1,5 +1,5 @@
 // Z-Buddy 宠物窗：精灵动画 + 状态轮询 + 点按暂停 + 拖动 + 右键菜单
-import { invoke } from "../shared/api.js";
+import { invoke, listen } from "../shared/api.js";
 import { loadPackByPref, SpriteAnimator } from "../shared/pack.js";
 
 const pet = document.querySelector("#pet");
@@ -17,13 +17,28 @@ const STATUS_LABEL = {
 };
 
 // ---- 宠物包 ----
-const pref = await invoke("get_pet_pref_cmd");
-const pack = await loadPackByPref(pref);
+let currentPref = await invoke("get_pet_pref_cmd");
+let pack = await loadPackByPref(currentPref);
 document.querySelector("#card-title").textContent = `Z-Buddy · ${pack.title}`;
-const atlas = new Image();
+let atlas = new Image();
 atlas.src = pack.atlasUrl;
-const animator = new SpriteAnimator(canvas, atlas, pack.manifest);
+let animator = new SpriteAnimator(canvas, atlas, pack.manifest);
 animator.start();
+
+// 监听宠物切换事件（主界面/托盘/右键切换后热加载）
+listen("pet-changed", async (e) => {
+  const newPref = e.payload;
+  if (newPref === currentPref) return;
+  currentPref = newPref;
+  pack = await loadPackByPref(currentPref);
+  document.querySelector("#card-title").textContent = `Z-Buddy · ${pack.title}`;
+  atlas = new Image();
+  atlas.src = pack.atlasUrl;
+  atlas.onload = () => {
+    animator = new SpriteAnimator(canvas, atlas, pack.manifest);
+    animator.start();
+  };
+});
 
 // ---- 状态轮询 ----
 let paused = false;
