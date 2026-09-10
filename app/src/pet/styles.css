@@ -9,16 +9,18 @@ body {
 #wrap {
   position: relative;
   width: 240px;
-  height: 300px;
+  height: 340px;
 }
 
 /* ---- 宠物本体（精灵图画布）---- */
+/* 画布位图 = 默认宠物夜羽的帧尺寸 192×192：帧与画布 1:1，运行时零缩放最清晰；
+   64×64 的像素宠物在此整数 3 倍放大，依旧锐利。 */
 #pet {
   position: absolute;
-  left: 56px;
-  top: 159px;
-  width: 128px;
-  height: 128px;
+  left: 24px;
+  top: 142px;
+  width: 192px;
+  height: 192px;
   user-select: none;
   cursor: grab;
 }
@@ -26,8 +28,8 @@ body {
   cursor: grabbing;
 }
 #pet-canvas {
-  width: 128px;
-  height: 128px;
+  width: 192px;
+  height: 192px;
   image-rendering: pixelated;
   transition: filter 0.3s;
   pointer-events: none;
@@ -73,10 +75,10 @@ body {
   50% { transform: translateY(-6px); }
 }
 
-/* ---- 悬停信息卡 ---- */
+/* ---- 悬停信息卡（贴在宠物上方：宠物顶边 CSS y=142，卡片底边 y=134）---- */
 #card {
   position: absolute;
-  bottom: 150px;
+  bottom: 206px;
   left: 50%;
   transform: translateX(-50%) translateY(6px);
   width: 224px;

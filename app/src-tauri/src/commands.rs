@@ -67,7 +67,7 @@ pub fn list_external_pets() -> Vec<serde_json::Value> {
 #[tauri::command]
 pub fn list_all_pets() -> Vec<serde_json::Value> {
     let pref = get_pet_pref();
-    const BUNDLED: &[&str] = &["mochi", "bsod", "fireball"];
+    const BUNDLED: &[&str] = &["yoru", "mochi", "bsod", "fireball"];
     let mut seen = std::collections::HashSet::new();
     pet_list()
         .into_iter()
@@ -89,7 +89,8 @@ pub fn list_all_pets() -> Vec<serde_json::Value> {
 }
 
 pub fn get_pet_pref() -> String {
-    read_app_key_str("pet").unwrap_or_else(|| "mochi".into())
+    // 默认宠物：夜羽（插画形象）
+    read_app_key_str("pet").unwrap_or_else(|| "yoru".into())
 }
 
 #[tauri::command]

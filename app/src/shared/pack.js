@@ -1,5 +1,5 @@
 // 宠物包加载器（hatch-pet 兼容：atlas.png + pet.json，行=状态，横向分帧）
-// 加载优先级：外部包（~/.z-buddy/pets/<pref>/）→ 内置团子（mochi）
+// 加载优先级：外部包（~/.z-buddy/pets/<pref>/）→ 内置宠物（默认夜羽 yoru）
 import { convertFileSrc, invoke } from "./api.js";
 
 /** 读取外部包清单；找不到返回 null */
@@ -20,8 +20,8 @@ export async function loadExternalManifest(name) {
   }
 }
 
-/** 内置宠物（mochi/bsod/fireball，atlas 在 /pets/<名>/ 下，dev 模式由 vite serve） */
-export async function loadBundledManifest(name = "mochi") {
+/** 内置宠物（yoru/mochi/bsod/fireball，atlas 在 /pets/<名>/ 下，dev 模式由 vite serve） */
+export async function loadBundledManifest(name = "yoru") {
   const manifest = await (await fetch(`/pets/${name}/pet.json`)).json();
   return {
     manifest,
@@ -44,7 +44,7 @@ export async function loadExternalByDir(dir) {
 
 /** 按偏好加载：内置名字优先走 loadBundledManifest，其余先尝试外部包，失败回退内置 */
 export async function loadPackByPref(pref) {
-  const BUNDLED = ["mochi", "bsod", "fireball"];
+  const BUNDLED = ["yoru", "mochi", "bsod", "fireball"];
   if (BUNDLED.includes(pref)) {
     return loadBundledManifest(pref);
   }
@@ -52,7 +52,7 @@ export async function loadPackByPref(pref) {
   const ext = await loadExternalManifest(pref);
   if (ext) return ext;
   // 失败回退默认
-  return loadBundledManifest("mochi");
+  return loadBundledManifest("yoru");
 }
 
 /** 精灵图动画器：bind 到 canvas，按状态名推帧（imageSmoothing 关闭保像素风） */

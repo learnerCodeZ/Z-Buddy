@@ -17,7 +17,9 @@ Z-Buddy/
 │   │   ├── pet/                #    宠物窗：精灵图动画、暂停/拖动、右键菜单
 │   │   ├── main/               #    主界面窗：总览/宠物管理/活动/设置
 │   │   ├── shared/             #    两窗共用：API 封装 + 宠物包加载器
-│   │   └── pets/               #    内置宠物包（mochi/bsod/fireball）
+│   │   └── pets/               #    内置宠物包（yoru 默认/插画、mochi/bsod/fireball 像素）
+│   ├── public/pets/            #    内置宠物包副本（Vite 静态目录约定，与 src/pets 同步）
+│   ├── tools/                  #    宠物素材生成器（python 像素 / node 插画）
 │   └── src-tauri/              #    Rust 后端
 │       ├── src/
 │       │   ├── lib.rs          #    run() 组装、双窗创建、单实例、自启、窗口事件
@@ -148,13 +150,26 @@ ZCode Agent
 
 ### 新增宠物
 
+宠物包 = 一个文件夹（`app/src/pets/<名>/` 内置，`~/.z-buddy/pets/<名>/` 外部），内含 `atlas.png` + `pet.json`。
+加内置宠物时记得**同时**放进 `app/src/pets/` 和 `app/public/pets/`（仓库既有约定），
+并在 `pack.js` 的 `BUNDLED`、`commands.rs` 的 `BUNDLED`、`config.rs` 的 `pet_list()` 三处登记。
+
 ```bash
-# 用生成器一行命令（四色可配：身体/肚皮/描边/高光）
+# ① 像素宠物（程序化绘制，四色可配：身体/肚皮/描边/高光）
 python app/tools/gen_mochi.py src/pets/<新名> <身体hex> <肚皮hex> <描边hex> <高光hex>
 
-# 或手工：64x64 帧，4列×4行，atlas.png + pet.json
-# 参考 src/pets/mochi/pet.json 的格式
+# ② 插画宠物（把一张完整立绘切成 4×4 图集：抠白底 + 四态动画，纯 Node 无依赖）
+node app/tools/gen_illustration_pet.mjs app/tools/source/<名>.png app/src/pets/<名> \
+     --name <名> --title-hex <标题的UTF-8字节hex> --frame 192
+# 标题用 hex 是因为 Windows PowerShell 5.1 传非 ASCII 参数会乱码
+# （夜羽 = e5a49ce7bebd）；生成后把 atlas.png / pet.json 复制到 app/public/pets/<名>/
+
+# ③ 手工：4列×4行，行=状态（idle/working/error/sleep），参考 src/pets/mochi/pet.json
 ```
+
+> 帧尺寸随包而定（像素宠物 64×64，插画宠物 192×192）；桌宠窗画布位图固定 192×192（窗口 240×340，
+> 宠物贴底、信息卡在其上方），与 192 帧 1:1、对 64 帧整数 3 倍放大。改画布尺寸时记得同步
+> `pet/styles.css` 的 `#pet`/`#card`、`tauri.conf.json` 的窗口高度与 `clickthrough.rs` 的点击穿透矩形。
 
 ### 新增 Tauri 命令
 

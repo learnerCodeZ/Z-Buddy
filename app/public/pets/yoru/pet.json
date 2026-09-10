@@ -1,0 +1,43 @@
+{
+  "name": "yoru",
+  "title": "夜羽",
+  "version": "1.0.0",
+  "author": "Z-Buddy",
+  "license": "original-artwork",
+  "frame": {
+    "w": 192,
+    "h": 192
+  },
+  "states": {
+    "idle": {
+      "row": 0,
+      "frames": 4,
+      "fps": 3
+    },
+    "thinking": {
+      "row": 0,
+      "frames": 4,
+      "fps": 6
+    },
+    "working": {
+      "row": 1,
+      "frames": 4,
+      "fps": 8
+    },
+    "permission": {
+      "row": 1,
+      "frames": 4,
+      "fps": 8
+    },
+    "error": {
+      "row": 2,
+      "frames": 4,
+      "fps": 6
+    },
+    "sleep": {
+      "row": 3,
+      "frames": 4,
+      "fps": 2
+    }
+  }
+}

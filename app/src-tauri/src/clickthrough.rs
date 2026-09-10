@@ -31,8 +31,9 @@ pub fn spawn(app: tauri::AppHandle) {
         let scale = win.scale_factor().unwrap_or(1.0);
         let lx = (cur.x - wpos.x as f64) / scale;
         let ly = (cur.y - wpos.y as f64) / scale;
-        // 交互区 = 宠物本体矩形（CSS 空间 50..190 x, 155..295 y，窗口宽 240）
-        let interactive = lx >= 50.0 && lx <= 190.0 && ly >= 155.0 && ly <= 295.0;
+        // 交互区 = 宠物本体矩形（CSS 空间 24..216 x, 142..334 y，窗口 240×340；
+        // 与 pet/styles.css 的 #pet 位置尺寸保持一致）
+        let interactive = lx >= 24.0 && lx <= 216.0 && ly >= 142.0 && ly <= 334.0;
         let _ = win.set_ignore_cursor_events(!interactive);
     });
 }

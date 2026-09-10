@@ -22,7 +22,7 @@
         "title": "z-buddy-pet",
         "url": "/pet/index.html",
         "width": 240,
-        "height": 300,
+        "height": 340,
         "transparent": true,
         "decorations": false,
         "alwaysOnTop": true,

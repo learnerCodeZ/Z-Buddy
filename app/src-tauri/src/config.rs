@@ -43,9 +43,14 @@ pub fn read_app_key_bool(key: &str) -> Option<bool> {
     read_app_json().get(key).and_then(|v| v.as_bool())
 }
 
-/// 可选宠物列表：内置宠物在前，外部包（含 pet.json 的目录）在后
+/// 可选宠物列表：内置宠物在前（首个 = 默认宠物），外部包（含 pet.json 的目录）在后
 pub fn pet_list() -> Vec<String> {
-    let mut list = vec!["mochi".to_string(), "bsod".to_string(), "fireball".to_string()];
+    let mut list = vec![
+        "yoru".to_string(),
+        "mochi".to_string(),
+        "bsod".to_string(),
+        "fireball".to_string(),
+    ];
     if let Ok(entries) = fs::read_dir(z_buddy_dir().join("pets")) {
         for e in entries.flatten() {
             if e.path().join("pet.json").is_file() {
