@@ -53,6 +53,16 @@
       "row": 7,
       "frames": 6,
       "fps": 4
+    },
+    "idle_alt": {
+      "row": 8,
+      "frames": 6,
+      "fps": 4
+    },
+    "thinking_alt": {
+      "row": 9,
+      "frames": 6,
+      "fps": 5
     }
   }
 }

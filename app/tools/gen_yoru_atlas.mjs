@@ -45,9 +45,11 @@ const SS = 4;
 const SIZE = FRAME * SS;
 const PAD_BOTTOM = 6;
 const COLS = 6;
-const ROWS = 8;
+const ROWS = 10;
 const POSE_H = 140; // 各状态行的角色高度（帧内像素）——留出上方气泡空间
 const SLEEP_TOP_CUT_SRC = 76; // 睡姿自带 Z 的高度（源图行数），从基准图顶部切掉
+// 思考姿势里"手/下巴"区域（相对姿势包围盒的比例）——用来做搓下巴的小幅动作
+const HAND_BOX_REL = { x0: 0.24, y0: 0.33, x1: 0.52, y1: 0.54 };
 
 const SRC = "app/tools/source";
 const FILES = {
@@ -156,12 +158,15 @@ function sheetPoses(img) {
   return poses;
 }
 
-/** 姿势 → 基准图（统一角色高度，底部留白由渲染时处理） */
+/** 姿势 → 基准图（统一角色高度；顺手去掉裁剪框边缘被切进来的邻姿势残渣） */
 function poseBase(img, box, heightPx = POSE_H) {
   const c = crop(img, box.x0, box.y0, box.x1, box.y1);
   const h = Math.round(heightPx * SS);
   const w = Math.max(1, Math.round((c.w * h) / c.h));
-  return resizeArea(c, w, h);
+  const base = resizeArea(c, w, h);
+  const dropped = dropEdgeSpecks(base);
+  if (dropped) console.log(`  （清掉 ${dropped} 处贴边残渣/白线）`);
+  return base;
 }
 
 /** 把一张字形素材缩放到目标大小，并按 alpha 系数贴进帧缓冲 */
@@ -173,6 +178,126 @@ function stamp(frame, glyph, { x, y, size, alpha = 1 }) {
     for (let i = 3; i < g.rgba.length; i += 4) g.rgba[i] = Math.round(g.rgba[i] * alpha);
   }
   alphaOver(frame, SIZE, g, Math.round(x * SS - w / 2), Math.round(y * SS - h / 2));
+}
+
+/** 去掉"贴着裁剪框边缘的细小白点/白线"——那是相邻姿势被切进来的残渣 */
+function dropEdgeSpecks(img, { maxAreaRatio = 0.03, edgeBand = 0.05 } = {}) {
+  const { w, h, rgba } = img;
+  const seen = new Uint8Array(w * h);
+  const st = [];
+  const comps = [];
+  for (let p0 = 0; p0 < w * h; p0++) {
+    if (seen[p0] || rgba[p0 * 4 + 3] <= 20) continue;
+    st.length = 0;
+    st.push(p0);
+    seen[p0] = 1;
+    let n = 0;
+    let x0 = w;
+    let y0 = h;
+    let x1 = -1;
+    let y1 = -1;
+    while (st.length) {
+      const p = st.pop();
+      const x = p % w;
+      const y = (p / w) | 0;
+      n++;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const np = ny * w + nx;
+        if (!seen[np] && rgba[np * 4 + 3] > 20) {
+          seen[np] = 1;
+          st.push(np);
+        }
+      }
+    }
+    comps.push({ n, x0, y0, x1, y1, bw: x1 - x0 + 1, bh: y1 - y0 + 1 });
+  }
+  if (!comps.length) return 0;
+  const main = comps.reduce((a, b) => (b.n > a.n ? b : a));
+  const band = w * edgeBand;
+  let removed = 0;
+  for (const c of comps) {
+    if (c === main) continue;
+    const small = c.n < main.n * maxAreaRatio;
+    const atEdge = c.x1 < band || c.x0 > w - band;
+    const thinTall = c.bh >= c.bw * 1.5;
+    if (small && atEdge && thinTall) {
+      // 擦掉该连通块（连同 2px 膨胀余量）
+      for (let y = Math.max(0, c.y0 - 2); y <= Math.min(h - 1, c.y1 + 2); y++)
+        for (let x = Math.max(0, c.x0 - 2); x <= Math.min(w - 1, c.x1 + 2); x++) {
+          const o = (y * w + x) * 4;
+          rgba[o + 3] = 0;
+        }
+      removed++;
+    }
+  }
+  return removed;
+}
+
+/** 把"?"做成和头顶 Z 一样的样式：白色实心 + 深色描边 */
+function outlineGlyph(glyph, { outlinePx = 4, dark = [0x1d, 0x1b, 0x22], feather = 1.2 } = {}) {
+  const { w, h, rgba } = glyph;
+  const mask = new Uint8Array(w * h);
+  for (let p = 0; p < w * h; p++) mask[p] = rgba[p * 4 + 3] > 40 ? 1 : 0;
+  const out = new Uint8Array(w * h * 4);
+  const r = Math.ceil(outlinePx);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const p = y * w + x;
+      const o = p * 4;
+      if (mask[p]) {
+        out[o] = out[o + 1] = out[o + 2] = 255; // 白色实心
+        out[o + 3] = 255;
+        continue;
+      }
+      // 距最近字形像素的距离（小图直接搜邻域就够）
+      let best = Infinity;
+      for (let dy = -r; dy <= r && best > 0; dy++)
+        for (let dx = -r; dx <= r; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          if (!mask[ny * w + nx]) continue;
+          const d = Math.hypot(dx, dy);
+          if (d < best) best = d;
+        }
+      if (best <= outlinePx + feather) {
+        const a = best <= outlinePx ? 1 : Math.max(0, (outlinePx + feather - best) / feather);
+        out[o] = dark[0];
+        out[o + 1] = dark[1];
+        out[o + 2] = dark[2];
+        out[o + 3] = Math.round(255 * a);
+      }
+    }
+  return { w, h, rgba: out };
+}
+
+/** 拆出"手/下巴"层：body 层把该矩形用上下边缘插值补掉，hand 层单独拿来做小幅位移 */
+function splitHand(base) {
+  const { w, h, rgba } = base;
+  const bx0 = Math.round(w * HAND_BOX_REL.x0);
+  const by0 = Math.round(h * HAND_BOX_REL.y0);
+  const bx1 = Math.round(w * HAND_BOX_REL.x1);
+  const by1 = Math.round(h * HAND_BOX_REL.y1);
+  const body = { w, h, rgba: Uint8Array.from(rgba) };
+  const hand = { w, h, rgba: new Uint8Array(rgba.length) };
+  for (let y = by0; y < by1; y++)
+    for (let x = bx0; x < bx1; x++) {
+      const o = (y * w + x) * 4;
+      for (let k = 0; k < 4; k++) hand.rgba[o + k] = rgba[o + k];
+      // body：用该列上下边缘（框外）线性插值补洞
+      const above = ((Math.max(0, by0 - 1)) * w + x) * 4;
+      const below = ((Math.min(h - 1, by1)) * w + x) * 4;
+      const t = (y - by0 + 1) / (by1 - by0 + 1);
+      for (let k = 0; k < 4; k++) body.rgba[o + k] = Math.round(rgba[above + k] * (1 - t) + rgba[below + k] * t);
+    }
+  return { body, hand, box: { bx0, by0, bx1, by1 } };
 }
 
 /** 提亮字形（素材里的 "?" 偏灰，深色桌面上不够醒目） */
@@ -278,7 +403,7 @@ function main() {
   // 气泡字形素材：Z（从图2 睡姿头顶取）、?（从图4 思考姿势头旁取）
   const zGlyphSource = sheets.idleB.img; // 图2
   const zGlyph = crop(zGlyphSource, 806, 70, 886, 156);
-  const qGlyph = brighten(crop(sheets.thinkQ.img, 1428, 100, 1472, 178));
+  const qGlyph = outlineGlyph(crop(sheets.thinkQ.img, 1428, 100, 1472, 178));
   const pauseGlyph = drawPauseGlyph();
   console.log(`气泡字形: Z ${zGlyph.w}×${zGlyph.h}, ? ${qGlyph.w}×${qGlyph.h}, 暂停 ${pauseGlyph.w}×${pauseGlyph.h}（程序绘制）`);
 
@@ -305,36 +430,49 @@ function main() {
     }
   }
 
-  // ---------- 3) idle：站姿 A/B 交替 + 呼吸 ----------
+  // ---------- 3) idle：两张站姿各占一行（运行期每 30 秒换一行）----------
   {
     const A = poseBase(sheets.idleA.img, sheets.idleA.poses[0].box);
     const B = poseBase(sheets.idleB.img, sheets.idleB.poses[0].box);
-    for (let k = 0; k < COLS; k++) putFrame(0, k, render(k < COLS / 2 ? A : B, breath(k)));
-    console.log(`idle: 两张站姿交替 + 呼吸（${A.w}×${A.h} / ${B.w}×${B.h}）`);
+    for (let k = 0; k < COLS; k++) {
+      putFrame(0, k, render(A, breath(k)));
+      putFrame(8, k, render(B, breath(k)));
+    }
+    console.log(`idle: 两张站姿各一行（row0 / row8），运行期每 30 秒切换（${A.w}×${A.h} / ${B.w}×${B.h}）`);
   }
 
-  // ---------- 4) thinking：思考姿势 A/B + "?" 气泡（并排 3 个）----------
+  // ---------- 4) thinking：两张思考姿势各一行 + "?" 气泡 + 手部小幅搓下巴 ----------
   {
-    const A = poseBase(sheets.idleA.img, sheets.idleA.poses[2].box);
-    const B = poseBase(sheets.idleB.img, sheets.idleB.poses[2].box);
+    const A = splitHand(poseBase(sheets.idleA.img, sheets.idleA.poses[2].box));
+    const B = splitHand(poseBase(sheets.idleB.img, sheets.idleB.poses[2].box));
     // 姿势自带一个 Z（在头顶偏右），所以 "?" 排在**左上**，别和它挤在一起
     const slots = [
       { x: 26, y: 30 },
       { x: 56, y: 30 },
       { x: 86, y: 30 },
     ];
+    const geom = { size: SIZE, ss: SS, bottom: SIZE - PAD_BOTTOM * SS };
     for (let k = 0; k < COLS; k++) {
-      putFrame(
-        6,
-        k,
-        render(k < COLS / 2 ? A : B, breath(k, COLS, 2.2), (raw) => {
-          for (const b of bubblesAt(3, k, COLS, slots, { rise: 2 })) {
-            if (b.alpha > 0.01) stamp(raw, qGlyph, { x: b.x, y: b.y, size: 24 * b.pop, alpha: b.alpha });
-          }
-        }),
-      );
+      const rub = Math.sin((2 * Math.PI * k) / COLS) * 1.6; // 手上下小幅移动 = 搓下巴
+      const b = breath(k, COLS, 2.2);
+      for (const [row, layer] of [
+        [6, A],
+        [9, B],
+      ]) {
+        putFrame(
+          row,
+          k,
+          render(layer.body, b, (raw) => {
+            const handRaw = renderFrame(layer.hand, { ...b, dy: b.dy + rub }, geom);
+            alphaOver(raw, SIZE, { w: SIZE, h: SIZE, rgba: handRaw }, 0, 0);
+            for (const bb of bubblesAt(3, k, COLS, slots, { rise: 2 })) {
+              if (bb.alpha > 0.01) stamp(raw, qGlyph, { x: bb.x, y: bb.y, size: 24 * bb.pop, alpha: bb.alpha });
+            }
+          }),
+        );
+      }
     }
-    console.log(`thinking: 思考姿势交替 + "?" 气泡（并排 3 个，依次出现）`);
+    console.log(`thinking: 两张思考姿势各一行（row6 / row9，每 30 秒切换）+ "?" 气泡 + 手部搓下巴（±1.6px）`);
   }
 
   // ---------- 5) sleep：睡姿 + Z 气泡（上下 3 个）----------
@@ -426,12 +564,17 @@ function main() {
       drag_right: { row: 5, frames: 1, fps: 1 },
       thinking: { row: 6, frames: COLS, fps: 5 },
       paused: { row: 7, frames: COLS, fps: 4 },
+      // 运行期每 30 秒切换的第二张形象（见 shared/pack.js 的 withPoseAlternate）
+      idle_alt: { row: 8, frames: COLS, fps: 4 },
+      thinking_alt: { row: 9, frames: COLS, fps: 5 },
     },
   };
   fs.writeFileSync(path.join(outDir, "pet.json"), JSON.stringify(manifest, null, 2) + "\n");
   const kb = (fs.statSync(path.join(outDir, "atlas.png")).size / 1024).toFixed(0);
   console.log(`\n已生成: ${outDir}/atlas.png (${atlas.w}×${atlas.h}, ${kb} KB)`);
-  console.log(`已生成: ${outDir}/pet.json（新增 states.paused，thinking/sleep 独立成行）`);
+  console.log(
+    `已生成: ${outDir}/pet.json（10 行；idle/idle_alt 与 thinking/thinking_alt 由运行期每 30 秒切换）`,
+  );
 }
 
 main();

@@ -81,6 +81,21 @@ export function withIdleSleep(status, sinceMs, nowMs, thresholdMs = IDLE_SLEEP_M
   return nowMs - sinceMs >= thresholdMs ? "sleep" : status;
 }
 
+/** 待机/思考各有两张形象，运行期每 30 秒换一张 */
+export const POSE_ALT_MS = 30000;
+
+/**
+ * 按"进入该状态后过了多久"在两张形象之间切换：idle ⇄ idle_alt、thinking ⇄ thinking_alt。
+ * states 传当前宠物包的 manifest.states：没有 *_alt 键时保持原状态（外部宠物自动降级）。
+ */
+export function withPoseAlternate(status, sinceMs, nowMs, states, periodMs = POSE_ALT_MS) {
+  if (status !== "idle" && status !== "thinking") return status;
+  if (!Number.isFinite(sinceMs)) return status;
+  const alt = `${status}_alt`;
+  if (!states || !states[alt]) return status;
+  return Math.floor((nowMs - sinceMs) / periodMs) % 2 === 1 ? alt : status;
+}
+
 /** 精灵图动画器：bind 到 canvas，按状态名推帧（imageSmoothing 关闭保像素风） */
 export class SpriteAnimator {
   constructor(canvas, atlas, manifest) {

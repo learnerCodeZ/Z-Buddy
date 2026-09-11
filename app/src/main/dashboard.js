@@ -1,6 +1,6 @@
 // 总览页：大图与角落宠物同帧同步 + 状态卡 + 暂停 + 事件时间线
 import { invoke } from "../shared/api.js";
-import { loadPackByPref, SpriteAnimator, withIdleSleep } from "../shared/pack.js";
+import { loadPackByPref, SpriteAnimator, withIdleSleep, withPoseAlternate } from "../shared/pack.js";
 
 const statusEl = document.querySelector("#dash-status");
 const detailEl = document.querySelector("#dash-detail");
@@ -20,11 +20,13 @@ const STATUS_LABEL = {
 
 let paused = false;
 let animator;
+let manifestStates = null; // 当前宠物包的 states（判断有没有 *_alt 形象）
 
 export async function bootDashboard() {
   const canvas = document.querySelector("#dash-canvas");
   const pref = await invoke("get_pet_pref_cmd");
   const pack = await loadPackByPref(pref);
+  manifestStates = pack.manifest.states || null;
   const atlas = new Image();
   atlas.src = pack.atlasUrl;
   animator = new SpriteAnimator(canvas, atlas, pack.manifest);
@@ -45,6 +47,7 @@ export async function refreshDashboard() {
   try {
     const pref = await invoke("get_pet_pref_cmd");
     const pack = await loadPackByPref(pref);
+    manifestStates = pack.manifest.states || null;
     const canvas = document.querySelector("#dash-canvas");
     const atlas = new Image();
     atlas.src = pack.atlasUrl;
@@ -58,7 +61,9 @@ async function tick() {
   try {
     const s = JSON.parse(await invoke("read_state"));
     paused = !!s.paused;
-    const status = paused ? "paused" : withIdleSleep(s.status || "sleep", Date.parse(s.since || ""), Date.now());
+    const sinceMs = Date.parse(s.since || "");
+    let status = paused ? "paused" : withIdleSleep(s.status || "sleep", sinceMs, Date.now());
+    if (!paused) status = withPoseAlternate(status, sinceMs, Date.now(), manifestStates);
     animator?.setStatus(status);
     statusEl.textContent = paused
       ? "已暂停 ⏸（点宠物或此处恢复）"

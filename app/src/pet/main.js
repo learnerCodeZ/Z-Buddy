@@ -1,6 +1,12 @@
 // Z-Buddy 宠物窗：精灵动画 + 状态轮询 + 点按暂停 + 拖动 + 右键菜单
 import { invoke, listen } from "../shared/api.js";
-import { loadPackByPref, SpriteAnimator, pickDragState, withIdleSleep } from "../shared/pack.js";
+import {
+  loadPackByPref,
+  SpriteAnimator,
+  pickDragState,
+  withIdleSleep,
+  withPoseAlternate,
+} from "../shared/pack.js";
 
 const pet = document.querySelector("#pet");
 const canvas = document.querySelector("#pet-canvas");
@@ -58,7 +64,9 @@ async function tick() {
       idleSinceLocal = null;
     }
     const sinceMs = Date.parse(s.since || "") || idleSinceLocal;
-    const status = paused ? "paused" : withIdleSleep(raw, sinceMs, Date.now());
+    // 待机超时 → 睡觉；待机/思考各有两张形象，每 30 秒换一张（包里有 *_alt 才切）
+    let status = paused ? "paused" : withIdleSleep(raw, sinceMs, Date.now());
+    if (!paused) status = withPoseAlternate(status, sinceMs, Date.now(), pack?.manifest?.states);
     // 长按拖动期间动画由拖动形象接管，别让轮询把状态覆盖回去
     if (!dragState) {
       pet.className = paused ? "paused-ui" : status;

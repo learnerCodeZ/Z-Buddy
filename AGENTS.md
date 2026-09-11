@@ -126,11 +126,15 @@ ZCode Agent
   所以 6 种状态就 6 行、每行 6 帧就 6 列 —— 换形态只改 `pet.json`，应用代码零改动；
 - 基础状态：`idle / thinking / working / permission / error / sleep`（可复用同一行）；
 - **可选扩展状态**：`drag_left` / `drag_right`（长按拖动的静态形象，左右互为镜像）、
-  `paused`（点桌宠暂停时的姿态）—— 宠物包没有这些键时自动降级为普通状态动画；
+  `paused`（点桌宠暂停时的姿态）、`idle_alt` / `thinking_alt`（待机/思考的**第二张形象**：
+  运行期每 30 秒与 `idle`/`thinking` 互换，规则在 `pack.js` 的 `withPoseAlternate()`）——
+  宠物包没有这些键时自动降级为普通状态动画；
 - **气泡（Z / ? / 暂停）烘焙进精灵图帧**：队列语义（最多 N 个、依次出现、最早的先消失、
   上下或并排排列）都在构建期合成，运行时不额外绘制 → 应用代码零改动；
-- 夜羽当前是 **6 列 × 8 行**（`idle/working/error/sleep/drag_left/drag_right/thinking/paused`），
-  图集 1152×1536；working/permission/error 仍用旧立绘（用户未指定这三个状态的新姿势）。
+- 夜羽当前是 **6 列 × 10 行**（`idle/working/error/sleep/drag_left/drag_right/thinking/paused/idle_alt/thinking_alt`），
+  图集 1152×1920；working/permission/error 仍用旧立绘（用户未指定这三个状态的新姿势）；
+- 思考行额外做了**手部小幅搓下巴**：姿势按"手/下巴矩形"拆成 body + hand 两层，hand 每帧上下位移 ±1.6px，
+  body 被挖掉的矩形用上下边缘插值补掉（避免留洞）；带气泡的状态行角色高度统一 140px（给气泡留空间）。
 
 ### 长按拖动 = 切换拖动形象（可选能力）
 
