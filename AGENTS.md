@@ -125,18 +125,20 @@ ZCode Agent
 - **atlas 不是固定 4×4**：播放器只按 `states[状态].row` 和 `frame.w/h` 裁图，从不校验图集行列数，
   所以 6 种状态就 6 行、每行 6 帧就 6 列 —— 换形态只改 `pet.json`，应用代码零改动；
 - 基础状态：`idle / thinking / working / permission / error / sleep`（共 6 个，可复用同一行）；
-- **可选扩展状态**：`drag_left` / `drag_right` —— 长按拖动时播放（见下），宠物包没有这两个键时自动降级。
+- **可选扩展状态**：`drag_left` / `drag_right` —— 长按拖动时显示的"拖动形象"（**静态单帧**，左右各一份，
+  其中一份是另一份的水平镜像），宠物包没有这两个键时自动降级为普通状态动画。
 
-### 长按拖动 = 游动（可选能力）
+### 长按拖动 = 切换拖动形象（可选能力）
 
-宠物窗的交互：**单击 = 暂停/恢复**；**长按 220ms = 拎起来，进入游动**；按住拖动 = 挪窗口（沿用系统拖动）。
+宠物窗的交互：**单击 = 暂停/恢复**；**长按 220ms = 拎起来，换成拖动形象**；按住拖动 = 挪窗口（沿用系统拖动）。
 
-- 朝向由**拖动方向**决定：向左（含左上/左下）与**正上方** → `drag_left`；其余（含向右、正下方）→ `drag_right`
-  （规则在 `shared/pack.js` 的 `pickDragState()`，有单测意义明确）；
+- 形象由**拖动方向**决定：向左（含左上/左下）与**正上方** → `drag_left`；其余（含向右、正下方）→ `drag_right`
+  （规则在 `shared/pack.js` 的 `pickDragState()`）；
 - 方向**不能用 mousemove 判断**：Windows 原生拖动走系统模态移动循环，WebView 收不到 mousemove。
-  实际做法是前端每 80ms 轮询 Rust 命令 `cursor_pos`（JS 定时器在拖动中照常运行），累计位移过阈值才换行（防抖）；
-- 游动期间 `#pet` 的 class 为 `swimming`，轮询的状态切换被抑制（`if (!swimDir)`），避免 600ms 轮询把动画覆盖回去；
-- 外部宠物包没有游动行时自动跳过（`hasSwimRows()`）。
+  实际做法是前端每 80ms 轮询 Rust 命令 `cursor_pos`（JS 定时器在拖动中照常运行），累计位移过阈值才换（防抖）；
+- 拖动期间 `#pet` 的 class 为 `dragging`，轮询的状态切换被抑制（`if (!dragState)`），避免 600ms 轮询把画面覆盖回去；
+- 外部宠物包没有拖动形象行时自动跳过（`hasDragRows()`）；
+- 生成方式见下：`--drag <立绘.png>`，工具自动抠背景 + 裁切 + 镜像，写入 row 4 / row 5（各 1 帧）。
 
 ### hooks 事件全表（7 种）
 
@@ -180,12 +182,12 @@ node app/tools/gen_illustration_pet.mjs app/tools/source/<名>.png app/src/pets/
 # 标题用 hex 是因为 Windows PowerShell 5.1 传非 ASCII 参数会乱码
 # （夜羽 = e5a49ce7bebd）；生成后把 atlas.png / pet.json 复制到 app/public/pets/<名>/
 
-# ②' 追加"长按拖动游动"两行（可选）：传一张游动姿势表（两行：左游/右游）
+# ②' 追加"长按拖动形象"两行（可选）：传一张单张立绘（不带动效）
 node app/tools/gen_illustration_pet.mjs app/tools/source/<名>.png app/src/pets/<名> \
-     --name <名> --title-hex <hex> --frame 192 --swim app/tools/source/<名>-swim.png
-# 工具会自动：定位两行最左的大模板立绘 → 剔除方向标签条 → 按内容包围盒裁切
-# → 白底泛洪抠图（阈值 250，实测内容最亮 249 / 背景 253）→ 按颜色+水线拆成"鸭子层/水面层"
-# → 程序化生成 6 帧浮沉俯仰 + 水面涟漪 → 写入 drag_left(row4) / drag_right(row5)
+     --name <名> --title-hex <hex> --frame 192 --drag app/tools/source/<名>-drag.png
+# 工具会自动：抠白底（阈值 250，可用 --drag-bgmin 调）→ 裁切到内容包围盒
+# → 写入 drag_left(row4) / drag_right(row5)，各 1 帧；另一个方向是水平镜像
+# 素材默认"朝右"（原图给 drag_right、镜像给 drag_left）；若立绘本来就朝左，加 --drag-faces left
 
 # ③ 手工：行 = 状态（idle/working/error/sleep[/drag_left/drag_right]），参考 src/pets/mochi/pet.json
 ```

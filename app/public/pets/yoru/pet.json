@@ -41,13 +41,13 @@
     },
     "drag_left": {
       "row": 4,
-      "frames": 6,
-      "fps": 10
+      "frames": 1,
+      "fps": 1
     },
     "drag_right": {
       "row": 5,
-      "frames": 6,
-      "fps": 10
+      "frames": 1,
+      "fps": 1
     }
   }
 }
