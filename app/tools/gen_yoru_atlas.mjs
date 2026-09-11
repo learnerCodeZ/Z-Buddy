@@ -48,8 +48,10 @@ const COLS = 6;
 const ROWS = 10;
 const POSE_H = 140; // 各状态行的角色高度（帧内像素）——留出上方气泡空间
 const SLEEP_TOP_CUT_SRC = 76; // 睡姿自带 Z 的高度（源图行数），从基准图顶部切掉
-// 思考姿势里"手/下巴"区域（相对姿势包围盒的比例）——用来做搓下巴的小幅动作
-const HAND_BOX_REL = { x0: 0.24, y0: 0.33, x1: 0.52, y1: 0.54 };
+// 思考姿势里"手"的区域（相对姿势包围盒的比例）——**只框手、不碰下巴**，
+// 否则下巴会跟着动（用户反馈过这个 bug）。上图验证过：这个框在下巴下方。
+const HAND_BOX_REL = { x0: 0.33, y0: 0.42, x1: 0.5, y1: 0.53 };
+const HAND_RUB_PX = 1.8; // 手左右微动幅度（帧内像素）
 
 const SRC = "app/tools/source";
 const FILES = {
@@ -453,7 +455,7 @@ function main() {
     ];
     const geom = { size: SIZE, ss: SS, bottom: SIZE - PAD_BOTTOM * SS };
     for (let k = 0; k < COLS; k++) {
-      const rub = Math.sin((2 * Math.PI * k) / COLS) * 1.6; // 手上下小幅移动 = 搓下巴
+      const rub = Math.sin((2 * Math.PI * k) / COLS) * HAND_RUB_PX; // 手左右微动
       const b = breath(k, COLS, 2.2);
       for (const [row, layer] of [
         [6, A],
@@ -463,7 +465,7 @@ function main() {
           row,
           k,
           render(layer.body, b, (raw) => {
-            const handRaw = renderFrame(layer.hand, { ...b, dy: b.dy + rub }, geom);
+            const handRaw = renderFrame(layer.hand, { ...b, dx: rub }, geom);
             alphaOver(raw, SIZE, { w: SIZE, h: SIZE, rgba: handRaw }, 0, 0);
             for (const bb of bubblesAt(3, k, COLS, slots, { rise: 2 })) {
               if (bb.alpha > 0.01) stamp(raw, qGlyph, { x: bb.x, y: bb.y, size: 24 * bb.pop, alpha: bb.alpha });
@@ -472,7 +474,9 @@ function main() {
         );
       }
     }
-    console.log(`thinking: 两张思考姿势各一行（row6 / row9，每 30 秒切换）+ "?" 气泡 + 手部搓下巴（±1.6px）`);
+    console.log(
+      `thinking: 两张思考姿势各一行（row6 / row9，每 30 秒切换）+ "?" 气泡 + 手部左右微动（±${HAND_RUB_PX}px，只框手不碰下巴）`,
+    );
   }
 
   // ---------- 5) sleep：睡姿 + Z 气泡（上下 3 个）----------
