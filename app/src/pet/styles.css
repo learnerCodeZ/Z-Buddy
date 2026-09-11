@@ -68,8 +68,9 @@ body {
 #pet.sleep #pet-canvas {
   filter: grayscale(0.6) brightness(0.85);
 }
-#pet.paused-ui #pet-canvas {
-  filter: grayscale(0.9) brightness(0.75);
+/* 暂停：姿势与气泡已经表达清楚了，不再叠灰度（角标仍保留） */
+#pet.paused-ui #pause-badge {
+  display: block;
 }
 /* 长按拖动 = 换成拖动形象：姿态全在精灵图里，CSS 不再叠加位移/滤镜，否则会打架；
    transition: none 很关键 —— 否则 0.3s 的滤镜过渡会把"变身"拖成慢动作 */

@@ -49,7 +49,8 @@ async function tick() {
   try {
     const s = JSON.parse(await invoke("read_state"));
     paused = !!s.paused;
-    const status = paused ? "sleep" : s.status || "sleep";
+    // 暂停 = 独立状态行（蜷缩姿势 + 暂停气泡）；class 仍用 paused-ui 以显示角标
+    const status = paused ? "paused" : s.status || "sleep";
     // 长按拖动期间动画由拖动形象接管，别让轮询把状态覆盖回去
     if (!dragState) {
       pet.className = paused ? "paused-ui" : status;
@@ -132,7 +133,7 @@ function exitDragPose() {
   dragTimer = null;
   dragState = null;
   lastCursor = null;
-  if (pack) animator.setStatus(paused ? "sleep" : "idle");
+  if (pack) animator.setStatus(paused ? "paused" : "idle");
 }
 
 let downScreen = { x: 0, y: 0 };

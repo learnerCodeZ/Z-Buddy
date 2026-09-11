@@ -124,9 +124,13 @@ ZCode Agent
 
 - **atlas 不是固定 4×4**：播放器只按 `states[状态].row` 和 `frame.w/h` 裁图，从不校验图集行列数，
   所以 6 种状态就 6 行、每行 6 帧就 6 列 —— 换形态只改 `pet.json`，应用代码零改动；
-- 基础状态：`idle / thinking / working / permission / error / sleep`（共 6 个，可复用同一行）；
-- **可选扩展状态**：`drag_left` / `drag_right` —— 长按拖动时显示的"拖动形象"（**静态单帧**，左右各一份，
-  其中一份是另一份的水平镜像），宠物包没有这两个键时自动降级为普通状态动画。
+- 基础状态：`idle / thinking / working / permission / error / sleep`（可复用同一行）；
+- **可选扩展状态**：`drag_left` / `drag_right`（长按拖动的静态形象，左右互为镜像）、
+  `paused`（点桌宠暂停时的姿态）—— 宠物包没有这些键时自动降级为普通状态动画；
+- **气泡（Z / ? / 暂停）烘焙进精灵图帧**：队列语义（最多 N 个、依次出现、最早的先消失、
+  上下或并排排列）都在构建期合成，运行时不额外绘制 → 应用代码零改动；
+- 夜羽当前是 **6 列 × 8 行**（`idle/working/error/sleep/drag_left/drag_right/thinking/paused`），
+  图集 1152×1536；working/permission/error 仍用旧立绘（用户未指定这三个状态的新姿势）。
 
 ### 长按拖动 = 切换拖动形象（可选能力）
 
@@ -196,6 +200,12 @@ node app/tools/gen_illustration_pet.mjs app/tools/source/<名>.png app/src/pets/
 #   （头顶 Z / Z 的卷尾 / 胸针心形里的 Z）；矩形只许覆盖字形，压到鸭子身上会留一块没镜像的补丁。
 
 # ③ 手工：行 = 状态（idle/working/error/sleep[/drag_left/drag_right]），参考 src/pets/mochi/pet.json
+
+# ④ 多姿势宠物（夜羽专用构建器）：4 张姿势图（每张 3 个姿势：站/睡/思考）+ 旧立绘 + 天鹅
+#    → 合成 8 行图集，并烘焙 Z / ? / 暂停气泡队列
+node app/tools/gen_yoru_atlas.mjs app/src/pets/yoru
+# 源图在 app/tools/source/：yoru-pose1..4.png、yoru.png（working/error 用）、yoru-drag.png（天鹅）
+# 想换某个状态的姿势，改 gen_yoru_atlas.mjs 里的 poses[索引] 再跑一次即可
 ```
 
 > 帧尺寸随包而定（像素宠物 64×64，插画宠物 192×192）；桌宠窗画布位图固定 192×192（窗口 240×340，

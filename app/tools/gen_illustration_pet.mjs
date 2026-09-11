@@ -443,7 +443,7 @@ function sampleBilinear(base, x, y) {
 }
 
 /** 渲染单帧：以「脚底中心」为锚点做平移/缩放/旋转（逆映射 + 预乘双线性） */
-function renderFrame(base, p, { size, ss, bottom }) {
+export function renderFrame(base, p, { size, ss, bottom }) {
   const { dx = 0, dy = 0, sx = 1, sy = 1, rot = 0 } = p;
   const out = new Uint8Array(size * size * 4);
   const rad = (rot * Math.PI) / 180;
@@ -471,7 +471,7 @@ function renderFrame(base, p, { size, ss, bottom }) {
 }
 
 /** 盒式降采样（超采样缓冲 → 最终帧），预乘 alpha */
-function boxDown(src, size, f) {
+export function boxDown(src, size, f) {
   const d = size / f;
   const out = new Uint8Array(d * d * 4);
   for (let y = 0; y < d; y++) {
@@ -506,7 +506,7 @@ function boxDown(src, size, f) {
 }
 
 /** 出错态调色：降饱和 + 压暗（CSS 层没有 error 滤镜，只能画进精灵图） */
-function gradeError(rgba, { desat = 0.45, bright = 0.9 } = {}) {
+export function gradeError(rgba, { desat = 0.45, bright = 0.9 } = {}) {
   for (let o = 0; o < rgba.length; o += 4) {
     if (rgba[o + 3] === 0) continue;
     const lum = 0.299 * rgba[o] + 0.587 * rgba[o + 1] + 0.114 * rgba[o + 2];
@@ -518,7 +518,7 @@ function gradeError(rgba, { desat = 0.45, bright = 0.9 } = {}) {
 }
 
 /** 直 alpha 的 source-over 贴图（用于把睡觉 Z 叠进帧内空白处） */
-function alphaOver(dst, dstSize, src, x0, y0) {
+export function alphaOver(dst, dstSize, src, x0, y0) {
   for (let y = 0; y < src.h; y++) {
     const dy = y0 + y;
     if (dy < 0 || dy >= dstSize) continue;

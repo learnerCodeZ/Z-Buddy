@@ -58,7 +58,7 @@ async function tick() {
   try {
     const s = JSON.parse(await invoke("read_state"));
     paused = !!s.paused;
-    const status = paused ? "sleep" : s.status || "sleep";
+    const status = paused ? "paused" : s.status || "sleep";
     animator?.setStatus(status);
     statusEl.textContent = paused
       ? "已暂停 ⏸（点宠物或此处恢复）"
