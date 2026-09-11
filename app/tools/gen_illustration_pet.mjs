@@ -18,7 +18,10 @@
  * 用法：
  *   node app/tools/gen_illustration_pet.mjs <源图.png> <输出目录> \
  *        [--name yoru] [--title 夜羽] [--frame 128] [--preview out.png] \
- *        [--split <源图行号>] [--no-ornament]
+ *        [--split <源图行号>] [--no-ornament] [--swim <游动姿势表.png>]
+ *
+ *   --swim：可选。传一张"游动姿势表"（两行：左游/右游），工具取每行最左的大模板立绘，
+ *   程序化派生 6 帧游动动效，追加 drag_left / drag_right 两行（供长按拖拽播放）。
  *
  * 只导出（缩放后的）源图供入库复现：
  *   node app/tools/gen_illustration_pet.mjs <源图.png> --emit-source out.png [--emit-height 768]
@@ -153,13 +156,42 @@ function pngChunk(type, data) {
   return out;
 }
 
-/** RGBA → PNG（filter 0） */
+/** RGBA → PNG（逐行自适应过滤器：比固定 filter 0 小 20~40%） */
 export function encodePNG({ w, h, rgba }) {
   const stride = w * 4;
   const raw = Buffer.alloc((stride + 1) * h);
+  const prevLine = Buffer.alloc(stride);
+  const cur = Buffer.alloc(stride);
+  const cand = Array.from({ length: 5 }, () => Buffer.alloc(stride));
   for (let y = 0; y < h; y++) {
-    raw[y * (stride + 1)] = 0;
-    Buffer.from(rgba.buffer, rgba.byteOffset + y * stride, stride).copy(raw, y * (stride + 1) + 1);
+    Buffer.from(rgba.buffer, rgba.byteOffset + y * stride, stride).copy(cur);
+    for (let i = 0; i < stride; i++) {
+      const a = i >= 4 ? cur[i - 4] : 0;
+      const b = prevLine[i];
+      const c = i >= 4 ? prevLine[i - 4] : 0;
+      const v = cur[i];
+      cand[0][i] = v;
+      cand[1][i] = (v - a) & 255;
+      cand[2][i] = (v - b) & 255;
+      cand[3][i] = (v - ((a + b) >> 1)) & 255;
+      cand[4][i] = (v - paeth(a, b, c)) & 255;
+    }
+    let best = 0;
+    let bestScore = Infinity;
+    for (let f = 0; f < 5; f++) {
+      let s = 0;
+      for (let i = 0; i < stride; i++) {
+        const v = cand[f][i];
+        s += v < 128 ? v : 256 - v;
+      }
+      if (s < bestScore) {
+        bestScore = s;
+        best = f;
+      }
+    }
+    raw[y * (stride + 1)] = best;
+    cand[best].copy(raw, y * (stride + 1) + 1);
+    cur.copy(prevLine);
   }
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(w, 0);
@@ -513,61 +545,297 @@ const SS = 4; // 超采样倍率
 const PAD_BOTTOM = 6; // 脚底留白（最终像素）
 const FIT_RATIO = 0.92; // 角色占帧高的比例
 
-/** 4 行 × 4 帧；行顺序 = pet.json 的 row 约定 */
+/** 状态行动画：统一 6 帧（与游动行同列数，图集网格整齐；动作按正弦采样，首尾自然衔接） */
 function buildRowPlan() {
-  return [
+  const N = 6;
+  const wave = (i, cycles = 1) => {
+    const t = (2 * Math.PI * cycles * i) / N;
+    return { s: Math.sin(t), c: Math.cos(t), k: (1 - Math.cos(t)) / 2 };
+  };
+  const rows = [
     {
       // row 0: idle / thinking —— 站立呼吸浮动
       base: "body",
-      frames: [
-        { dy: 0, sx: 1.0, sy: 1.0 },
-        { dy: -1.5, sx: 1.008, sy: 0.992 },
-        { dy: -3.0, sx: 1.016, sy: 0.985 },
-        { dy: -1.5, sx: 1.008, sy: 0.992 },
-      ],
+      frames: Array.from({ length: N }, (_, i) => {
+        const { k } = wave(i);
+        return { dy: -3.0 * k, sx: 1 + 0.016 * k, sy: 1 - 0.015 * k };
+      }),
     },
     {
       // row 1: working / permission —— 蹦跳 + 小幅摆头
       base: "body",
-      frames: [
-        { dy: -4.5, sx: 1.0, sy: 0.98, rot: -2.5 },
-        { dy: -1.0, sx: 0.99, sy: 1.02, rot: 0 },
-        { dy: -4.5, sx: 1.0, sy: 0.98, rot: 2.5 },
-        { dy: -1.0, sx: 0.99, sy: 1.02, rot: 0 },
-      ],
+      frames: Array.from({ length: N }, (_, i) => {
+        const { s, c } = wave(i);
+        return { dy: -2.75 - 1.75 * c, sx: 1 + 0.01 * c, sy: 1 - 0.02 * c, rot: 2.5 * s };
+      }),
     },
     {
-      // row 2: error —— 左右抖动 + 去色压暗
+      // row 2: error —— 左右抖动（2 倍频）+ 去色压暗
       base: "body",
       grade: "error",
-      frames: [
-        { dx: -2.5, rot: -3, sy: 0.995 },
-        { dx: 2.5, rot: 2, sy: 0.995 },
-        { dx: -2.0, rot: -3, sy: 0.995 },
-        { dx: 2.0, rot: 3, sy: 0.995 },
-      ],
+      frames: Array.from({ length: N }, (_, i) => {
+        const { s } = wave(i, 2);
+        return { dx: 2.4 * s, rot: 3 * s, sy: 0.995 };
+      }),
     },
     {
       // row 3: sleep —— 同一主体 + 右上角飘一个「Z」（CSS 另有灰化滤镜）
       base: "body",
       ornament: true,
-      frames: [
-        { dy: 0, sx: 1.0, sy: 1.0 },
-        { dy: 0.8, sx: 1.005, sy: 0.99 },
-        { dy: 1.8, sx: 1.012, sy: 0.978 },
-        { dy: 0.8, sx: 1.005, sy: 0.99 },
-      ],
+      frames: Array.from({ length: N }, (_, i) => {
+        const { k } = wave(i);
+        return { dy: 1.8 * k, sx: 1 + 0.012 * k, sy: 1 - 0.022 * k };
+      }),
     },
   ];
+  return rows;
+}
+
+// ============================ 路线 C：游动行（拖拽动效） ============================
+//
+// 素材是一张"游动姿势表"（两行：左游 / 右游）。取每行最左那张**大模板立绘**作为唯一
+// 静帧，程序化派生 6 帧游动动效（鸭子浮沉俯仰 + 水面涟漪波光），接成
+// drag_left / drag_right 两个状态行。
+//
+// 为什么不用右侧那 6 张编号小帧：它们只有 ~127×175px，塞进 192 帧会糊；大模板是
+// 253×315，缩到 192 帧仍有余量。
+
+/** 深色连通域（用于定位鸭子本体） */
+function darkBlobs(img, { darkMax = 120, minArea = 500 } = {}) {
+  const { w, h, rgba } = img;
+  const dark = new Uint8Array(w * h);
+  for (let p = 0; p < w * h; p++) {
+    const o = p * 4;
+    dark[p] = 0.299 * rgba[o] + 0.587 * rgba[o + 1] + 0.114 * rgba[o + 2] < darkMax ? 1 : 0;
+  }
+  const seen = new Uint8Array(w * h);
+  const q = new Int32Array(w * h);
+  const out = [];
+  for (let p0 = 0; p0 < w * h; p0++) {
+    if (!dark[p0] || seen[p0]) continue;
+    let qh = 0;
+    let qt = 0;
+    let area = 0;
+    let x0 = w;
+    let y0 = h;
+    let x1 = -1;
+    let y1 = -1;
+    q[qt++] = p0;
+    seen[p0] = 1;
+    while (qh < qt) {
+      const p = q[qh++];
+      const x = p % w;
+      const y = (p / w) | 0;
+      area++;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const np = ny * w + nx;
+          if (dark[np] && !seen[np]) {
+            seen[np] = 1;
+            q[qt++] = np;
+          }
+        }
+    }
+    if (area >= minArea) out.push({ area, x0, y0, x1, y1, w: x1 - x0 + 1, h: y1 - y0 + 1 });
+  }
+  return out.sort((a, b) => b.area - a.area);
+}
+
+/**
+ * 自动定位两张大模板立绘并给出裁切框：
+ *   每半张图里最大的"非标签条"深色块 = 大模板本体；
+ *   其右侧最近的"编号帧级"块（面积 8k~20k）左边界再留余量 = 切线（避免切进邻帧）；
+ *   裁切框 = 该窗口内的内容包围盒（含水面）。
+ */
+export function detectSwimTemplates(img, { cutMargin = 24 } = {}) {
+  const { w, h, rgba } = img;
+  const bg = [rgba[0], rgba[1], rgba[2]];
+  const isContent = (o) =>
+    Math.abs(rgba[o] - bg[0]) > 3 || Math.abs(rgba[o + 1] - bg[1]) > 3 || Math.abs(rgba[o + 2] - bg[2]) > 3;
+  const blobs = darkBlobs(img);
+  const out = {};
+  const halves = [
+    ["left", 0, Math.floor(h / 2)],
+    ["right", Math.floor(h / 2), h],
+  ];
+  for (const [key, lo, hi] of halves) {
+    const inHalf = blobs.filter((b) => (b.y0 + b.y1) / 2 >= lo && (b.y0 + b.y1) / 2 < hi);
+    const cand = inHalf.filter((b) => b.w / b.h <= 3.2); // 排除方向标签条
+    if (!cand.length) throw new Error(`游动素材：${key} 半张没找到大模板`);
+    const tmpl = cand[0];
+    // 方向标签条（宽扁的深色块）：算内容包围盒时要跳过它，否则会把标签裁进帧里
+    const pillBlob = inHalf.find((b) => b.w / b.h > 3.2 && b.area > 2000) || null;
+    const pill = pillBlob
+      ? { x0: pillBlob.x0 - 4, y0: pillBlob.y0 - 4, x1: pillBlob.x1 + 5, y1: pillBlob.y1 + 5 }
+      : null;
+    const inPill = (x, y) => pill && x >= pill.x0 && x <= pill.x1 && y >= pill.y0 && y <= pill.y1;
+    const frames = cand
+      .filter((b) => b.x0 > tmpl.x1 && b.area > 8000 && b.area < 20000)
+      .sort((a, b) => a.x0 - b.x0);
+    const cutX = frames.length ? frames[0].x0 - cutMargin : w;
+    let bx0 = cutX;
+    let by0 = hi;
+    let bx1 = 0;
+    let by1 = lo;
+    for (let y = lo; y < hi; y++)
+      for (let x = 0; x < cutX; x++) {
+        if (inPill(x, y)) continue;
+        if (!isContent((y * w + x) * 4)) continue;
+        if (x < bx0) bx0 = x;
+        if (x > bx1) bx1 = x;
+        if (y < by0) by0 = y;
+        if (y > by1) by1 = y;
+      }
+    out[key] = {
+      crop: { x0: bx0, y0: by0, x1: bx1 + 1, y1: by1 + 1 },
+      pill,
+      bodyBottom: tmpl.y1, // 水线参考
+      bodyH: tmpl.h,
+      bodyCx: (tmpl.x0 + tmpl.x1) / 2,
+      framesFound: frames.length,
+    };
+  }
+  return out;
+}
+
+/** 底部若干行做 alpha 渐隐（游动素材的水面在裁切处会有硬边） */
+export function fadeBottomEdge(img, rows = 10) {
+  const { w, h, rgba } = img;
+  for (let i = 0; i < rows; i++) {
+    const y = h - 1 - i;
+    if (y < 0) break;
+    const g = i / rows; // 最底行 g≈0 → 全透明
+    for (let x = 0; x < w; x++) {
+      const o = (y * w + x) * 4;
+      rgba[o + 3] = Math.round(rgba[o + 3] * g);
+    }
+  }
+}
+
+/** 把一块矩形区域擦成透明（用于剔除方向标签条） */
+export function eraseRect(img, r) {
+  for (let y = Math.max(0, r.y0); y < Math.min(img.h, r.y1); y++)
+    for (let x = Math.max(0, r.x0); x < Math.min(img.w, r.x1); x++) {
+      const o = (y * img.w + x) * 4;
+      img.rgba[o + 3] = 0;
+    }
+}
+
+/** 按"颜色 + 水线"把素材拆成鸭子层与水面层（鸭子黑、水浅，可干净分离） */
+export function splitWaterLayers(img, { yWater, lightMin = 195 }) {
+  const { w, h, rgba } = img;
+  const duck = new Uint8Array(rgba.length);
+  const water = new Uint8Array(rgba.length);
+  let duckPx = 0;
+  let waterPx = 0;
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const o = (y * w + x) * 4;
+      const a = rgba[o + 3];
+      if (!a) continue;
+      const m = Math.min(rgba[o], rgba[o + 1], rgba[o + 2]);
+      const isWater = y >= yWater && m >= lightMin;
+      const dst = isWater ? water : duck;
+      dst[o] = rgba[o];
+      dst[o + 1] = rgba[o + 1];
+      dst[o + 2] = rgba[o + 2];
+      dst[o + 3] = a;
+      if (isWater) waterPx++;
+      else duckPx++;
+    }
+  return { duck: { w, h, rgba: duck }, water: { w, h, rgba: water }, duckPx, waterPx };
+}
+
+/** 把一层按"绕锚点旋转缩放 + 锚点落到目标点"贴进帧缓冲（source-over） */
+function blitLayer(dst, size, layer, o) {
+  const { ss, dx = 0, dy = 0, rot = 0, sx = 1, sy = 1, alphaGain = 1, anchorX, anchorY, destX, destY } = o;
+  const rad = (rot * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const cx = destX + dx * ss;
+  const cy = destY + dy * ss;
+  for (let py = 0; py < size; py++) {
+    const qy = py + 0.5 - cy;
+    for (let px = 0; px < size; px++) {
+      const qx = px + 0.5 - cx;
+      const rx = qx * cos + qy * sin;
+      const ry = -qx * sin + qy * cos;
+      const s = sampleBilinear(layer, anchorX + rx / sx - 0.5, anchorY + ry / sy - 0.5);
+      const a = (s[3] / 255) * alphaGain;
+      if (a <= 0.002) continue;
+      const dofs = (py * size + px) * 4;
+      const da = dst[dofs + 3] / 255;
+      const oa = a + da * (1 - a);
+      if (oa <= 0) continue;
+      for (let k = 0; k < 3; k++) {
+        dst[dofs + k] = (s[k] * a + dst[dofs + k] * da * (1 - a)) / oa;
+      }
+      dst[dofs + 3] = oa * 255;
+    }
+  }
+}
+
+/** 合成一帧游动：水面先铺，鸭子压在上面 */
+function renderSwimFrame(layers, p, geom) {
+  const out = new Uint8Array(geom.size * geom.size * 4);
+  blitLayer(out, geom.size, layers.water, {
+    ...geom,
+    dx: p.wdx,
+    dy: p.wdy,
+    rot: p.wrot,
+    sx: p.wsx,
+    sy: p.wsy,
+    alphaGain: p.wgain,
+  });
+  blitLayer(out, geom.size, layers.duck, {
+    ...geom,
+    dx: p.ddx,
+    dy: p.ddy,
+    rot: p.drot,
+    sx: p.dsx,
+    sy: p.dsy,
+  });
+  return out;
+}
+
+/** 6 帧游动循环（正弦采样，首尾自然衔接） */
+export function buildSwimPlan(n = 6) {
+  const frames = [];
+  for (let i = 0; i < n; i++) {
+    const t = (2 * Math.PI * (i + 0.5)) / n;
+    const s = Math.sin(t);
+    const c = Math.cos(t);
+    frames.push({
+      ddx: 0,
+      ddy: -3.2 * s, // 鸭子随波浮沉
+      drot: 2.4 * c, // 轻微俯仰
+      dsx: 1 + 0.01 * c,
+      dsy: 1 - 0.012 * c,
+      wdx: 0,
+      wdy: 1.1 * s, // 水面反向微动
+      wrot: -1.2 * c,
+      wsx: 1 + 0.018 * c,
+      wsy: 1 - 0.01 * s,
+      wgain: 0.9 + 0.1 * c, // 波光闪烁
+    });
+  }
+  return frames;
 }
 
 // ============================ 预览图 ============================
 
-function previewSheet(atlas, frame, scale = 2) {
+function previewSheet(atlas, frame, rows, cols, scale = 2) {
   const S = frame * scale;
   const pad = 6;
-  const w = 4 * S + 5 * pad;
-  const h = 4 * S + 5 * pad;
+  const w = cols * S + (cols + 1) * pad;
+  const h = rows * S + (rows + 1) * pad;
   const bg = [0x1e, 0x22, 0x29]; // 与应用深色底一致
   const rgba = new Uint8Array(w * h * 4);
   for (let i = 0; i < w * h; i++) {
@@ -576,8 +844,8 @@ function previewSheet(atlas, frame, scale = 2) {
     rgba[i * 4 + 2] = bg[2];
     rgba[i * 4 + 3] = 255;
   }
-  for (let row = 0; row < 4; row++) {
-    for (let col = 0; col < 4; col++) {
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
       const ox = pad + col * (S + pad);
       const oy = pad + row * (S + pad);
       for (let y = 0; y < S; y++) {
@@ -616,7 +884,8 @@ function main() {
   const emitSource = typeof args["emit-source"] === "string" ? args["emit-source"] : null;
   if (!src || (!outDir && !emitSource)) {
     console.error(
-      "用法: node gen_illustration_pet.mjs <源图.png> <输出目录> [--name X --title Y --frame 128 --preview P --split N --no-ornament]",
+      "用法: node gen_illustration_pet.mjs <源图.png> <输出目录> [--name X --title Y --frame 128 " +
+        "--preview P --split N --no-ornament] [--swim <游动姿势表.png>]",
     );
     process.exit(2);
   }
@@ -696,7 +965,78 @@ function main() {
 
   const plan = buildRowPlan();
   const SIZE = FRAME * SS;
-  const atlas = { w: FRAME * 4, h: FRAME * 4, rgba: new Uint8Array(FRAME * 4 * FRAME * 4 * 4) };
+  const COLS = 6;
+
+  // ---- 路线 C：游动行（可选，--swim <姿势表.png>）----
+  let swim = null;
+  if (typeof args.swim === "string") {
+    const sheet = decodePNG(fs.readFileSync(args.swim));
+    keyWhiteBackground(sheet, { bgMin: 250 }); // 实测：内容最亮 249、背景 253 → 250 干净分界
+    const det = detectSwimTemplates(sheet);
+    swim = {};
+    const fitPx = FRAME * 0.94 * SS;
+    for (const dir of ["left", "right"]) {
+      const d = det[dir];
+      if (d.pill) eraseRect(sheet, d.pill); // 先剔除方向标签条，再裁切
+    }
+    for (const dir of ["left", "right"]) {
+      const d = det[dir];
+      // 裁切宽度收到本体高的 1.15 倍（左右对称、以鸭子为中心）：避免宽水面把鸭子挤小，
+      // 也让左右两个方向的鸭子最终渲染尺寸基本一致。
+      const maxW = Math.round(d.bodyH * 1.15);
+      let cx0 = d.crop.x0;
+      let cx1 = d.crop.x1;
+      if (cx1 - cx0 > maxW) {
+        const bc = Math.round(d.bodyCx);
+        cx0 = Math.max(d.crop.x0, bc - Math.round(maxW / 2));
+        cx1 = Math.min(d.crop.x1, cx0 + maxW);
+        cx0 = Math.max(d.crop.x0, cx1 - maxW);
+      }
+      const raw = crop(sheet, cx0, d.crop.y0, cx1, d.crop.y1);
+      fadeBottomEdge(raw, 10);
+      const yWater = d.bodyBottom - d.crop.y0 - 6;
+      const layers = splitWaterLayers(raw, { yWater });
+      const k = fitPx / Math.max(raw.w, raw.h);
+      const w = Math.max(1, Math.round(raw.w * k));
+      const h = Math.max(1, Math.round(raw.h * k));
+      const scaled = {
+        duck: resizeArea(layers.duck, w, h),
+        water: resizeArea(layers.water, w, h),
+      };
+      const anchorY = yWater * k;
+      const layerTop = (SIZE - h) / 2;
+      // 以「鸭子本体中心」对齐帧中心（水面可以不对称地拖在后面）
+      const bodyCxLayer = (d.bodyCx - cx0) * k;
+      swim[dir] = {
+        layers: scaled,
+        geom: {
+          size: SIZE,
+          ss: SS,
+          anchorX: w / 2,
+          anchorY,
+          destX: SIZE / 2 - (bodyCxLayer - w / 2),
+          destY: layerTop + anchorY,
+        },
+      };
+      console.log(
+        `游动素材 ${dir}: 裁切 ${raw.w}×${raw.h}（本体高 ${d.bodyH}，编号帧 ${d.framesFound} 个）` +
+          ` → 缩放 ${w}×${h}，鸭子 ${Math.round((d.bodyH * k) / SS)}px 高，` +
+          `鸭子层 ${layers.duckPx}px / 水面层 ${layers.waterPx}px`,
+      );
+    }
+  }
+
+  const ROWS = swim ? 6 : 4;
+  const atlas = { w: FRAME * COLS, h: FRAME * ROWS, rgba: new Uint8Array(FRAME * COLS * FRAME * ROWS * 4) };
+  const putFrame = (row, col, raw) => {
+    const frame = boxDown(raw, SIZE, SS);
+    if (row === 2) gradeError(frame.rgba);
+    for (let y = 0; y < FRAME; y++) {
+      const dst = ((row * FRAME + y) * atlas.w + col * FRAME) * 4;
+      atlas.rgba.set(frame.rgba.subarray(y * FRAME * 4, (y + 1) * FRAME * 4), dst);
+    }
+  };
+
   plan.forEach((rowPlan, row) => {
     rowPlan.frames.forEach((p, col) => {
       const raw = renderFrame(base, p, { size: SIZE, ss: SS, bottom: SIZE - PAD_BOTTOM * SS });
@@ -711,17 +1051,33 @@ function main() {
           Math.round(bodyTopInFrame + ornament.top),
         );
       }
-      const frame = boxDown(raw, SIZE, SS);
-      if (rowPlan.grade === "error") gradeError(frame.rgba);
-      for (let y = 0; y < FRAME; y++) {
-        const dst = ((row * FRAME + y) * atlas.w + col * FRAME) * 4;
-        atlas.rgba.set(frame.rgba.subarray(y * FRAME * 4, (y + 1) * FRAME * 4), dst);
-      }
+      putFrame(row, col, raw);
     });
   });
 
+  if (swim) {
+    const swimFrames = buildSwimPlan(COLS);
+    [["left", 4], ["right", 5]].forEach(([dir, row]) => {
+      const s = swim[dir];
+      swimFrames.forEach((p, col) => putFrame(row, col, renderSwimFrame(s.layers, p, s.geom)));
+    });
+    console.log(`游动行: drag_left → row 4, drag_right → row 5（各 ${COLS} 帧）`);
+  }
+
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, "atlas.png"), encodePNG(atlas));
+  const states = {
+    idle: { row: 0, frames: COLS, fps: 4.5 },
+    thinking: { row: 0, frames: COLS, fps: 9 },
+    working: { row: 1, frames: COLS, fps: 12 },
+    permission: { row: 1, frames: COLS, fps: 12 },
+    error: { row: 2, frames: COLS, fps: 9 },
+    sleep: { row: 3, frames: COLS, fps: 3 },
+  };
+  if (swim) {
+    states.drag_left = { row: 4, frames: COLS, fps: 10 };
+    states.drag_right = { row: 5, frames: COLS, fps: 10 };
+  }
   const manifest = {
     name,
     title,
@@ -729,14 +1085,7 @@ function main() {
     author: "Z-Buddy",
     license: "original-artwork",
     frame: { w: FRAME, h: FRAME },
-    states: {
-      idle: { row: 0, frames: 4, fps: 3 },
-      thinking: { row: 0, frames: 4, fps: 6 },
-      working: { row: 1, frames: 4, fps: 8 },
-      permission: { row: 1, frames: 4, fps: 8 },
-      error: { row: 2, frames: 4, fps: 6 },
-      sleep: { row: 3, frames: 4, fps: 2 },
-    },
+    states,
   };
   fs.writeFileSync(path.join(outDir, "pet.json"), JSON.stringify(manifest, null, 2) + "\n");
 
@@ -746,7 +1095,7 @@ function main() {
 
   if (typeof args.preview === "string") {
     fs.mkdirSync(path.dirname(args.preview), { recursive: true });
-    fs.writeFileSync(args.preview, encodePNG(previewSheet(atlas, FRAME, 2)));
+    fs.writeFileSync(args.preview, encodePNG(previewSheet(atlas, FRAME, ROWS, COLS, 2)));
     console.log(`已生成预览: ${args.preview}`);
   }
 }

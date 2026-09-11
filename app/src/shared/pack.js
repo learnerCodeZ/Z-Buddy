@@ -55,6 +55,19 @@ export async function loadPackByPref(pref) {
   return loadBundledManifest("yoru");
 }
 
+/**
+ * 拖动方向 → 游动行（长按拖动时的朝向）：
+ *   向左（含左上/左下）与**正上方** → drag_left；其余（含向右、正下方）→ drag_right。
+ * 调用方已按累计位移过滤，这里只做方向分类；无法判定时保持 current。
+ */
+export function pickDragState(dx, dy, current = null) {
+  if (dx < 0) return "drag_left";
+  if (dx > 0) return "drag_right";
+  if (dy < 0) return "drag_left"; // 正上方
+  if (dy > 0) return "drag_right"; // 正下方
+  return current;
+}
+
 /** 精灵图动画器：bind 到 canvas，按状态名推帧（imageSmoothing 关闭保像素风） */
 export class SpriteAnimator {
   constructor(canvas, atlas, manifest) {

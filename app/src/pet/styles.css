@@ -66,6 +66,11 @@ body {
 #pet.paused-ui #pet-canvas {
   filter: grayscale(0.9) brightness(0.75);
 }
+/* 长按拖动 = 游动：动作全在精灵图里，CSS 不再叠加位移/滤镜，否则会打架 */
+#pet.swimming #pet-canvas {
+  animation: none;
+  filter: none;
+}
 #pet.paused-ui #pause-badge {
   display: block;
 }

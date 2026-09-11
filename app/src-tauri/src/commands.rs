@@ -42,6 +42,16 @@ pub fn set_dragging(on: bool) {
     crate::DRAGGING.store(on, std::sync::atomic::Ordering::SeqCst);
 }
 
+/// 当前光标位置（物理像素）。长按拖动时 WebView 收不到 mousemove（Windows 系统模态
+/// 移动循环），但 JS 定时器照常跑 → 由前端轮询本命令判断游动朝向。
+#[tauri::command]
+pub fn cursor_pos(app: tauri::AppHandle) -> serde_json::Value {
+    match app.cursor_position() {
+        Ok(p) => json!({ "x": p.x, "y": p.y }),
+        Err(_) => json!(null),
+    }
+}
+
 // ---- 宠物包 ----
 
 /// 外部包（~/.z-buddy/pets/<名>/pet.json）

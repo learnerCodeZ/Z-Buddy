@@ -11,33 +11,43 @@
   "states": {
     "idle": {
       "row": 0,
-      "frames": 4,
-      "fps": 3
+      "frames": 6,
+      "fps": 4.5
     },
     "thinking": {
       "row": 0,
-      "frames": 4,
-      "fps": 6
+      "frames": 6,
+      "fps": 9
     },
     "working": {
       "row": 1,
-      "frames": 4,
-      "fps": 8
+      "frames": 6,
+      "fps": 12
     },
     "permission": {
       "row": 1,
-      "frames": 4,
-      "fps": 8
+      "frames": 6,
+      "fps": 12
     },
     "error": {
       "row": 2,
-      "frames": 4,
-      "fps": 6
+      "frames": 6,
+      "fps": 9
     },
     "sleep": {
       "row": 3,
-      "frames": 4,
-      "fps": 2
+      "frames": 6,
+      "fps": 3
+    },
+    "drag_left": {
+      "row": 4,
+      "frames": 6,
+      "fps": 10
+    },
+    "drag_right": {
+      "row": 5,
+      "frames": 6,
+      "fps": 10
     }
   }
 }

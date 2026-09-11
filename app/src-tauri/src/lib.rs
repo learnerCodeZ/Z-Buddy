@@ -72,6 +72,7 @@ pub fn run() {
             commands::read_state,
             commands::set_pause,
             commands::set_dragging,
+            commands::cursor_pos,
             commands::list_external_pets,
             commands::list_all_pets,
             commands::get_pet_pref_cmd,
