@@ -32,7 +32,6 @@ import {
   resizeArea,
   renderFrame,
   boxDown,
-  gradeError,
   alphaOver,
   mirrorKeepUpright,
   parseRegions,
@@ -310,16 +309,6 @@ function outlineGlyph(glyph, { outlinePx = 4, dark = [0x1d, 0x1b, 0x22], feather
   return { w, h, rgba: out };
 }
 
-/** 提亮字形（素材里的 "?" 偏灰，深色桌面上不够醒目） */
-function brighten(glyph, gain = 1.35, lift = 20) {
-  const out = { w: glyph.w, h: glyph.h, rgba: new Uint8Array(glyph.rgba.length) };
-  for (let i = 0; i < glyph.rgba.length; i += 4) {
-    for (let k = 0; k < 3; k++) out.rgba[i + k] = Math.min(255, Math.round(glyph.rgba[i + k] * gain + lift));
-    out.rgba[i + 3] = glyph.rgba[i + 3];
-  }
-  return out;
-}
-
 /** 程序绘制"暂停"字形：白色双竖条 + 深色描边（与 Z/? 的描边风格一致） */
 function drawPauseGlyph(w = 58, h = 64) {
   const rgba = new Uint8Array(w * h * 4);
@@ -384,9 +373,8 @@ function main() {
   const outDir = args.find((a) => !a.startsWith("--")) || "app/src/pets/yoru";
   const atlas = { w: FRAME * COLS, h: FRAME * ROWS, rgba: new Uint8Array(FRAME * COLS * FRAME * ROWS * 4) };
 
-  const putFrame = (row, col, raw, { error = false } = {}) => {
+  const putFrame = (row, col, raw) => {
     const f = boxDown(raw, SIZE, SS);
-    if (error) gradeError(f.rgba);
     for (let y = 0; y < FRAME; y++) {
       const dst = ((row * FRAME + y) * atlas.w + col * FRAME) * 4;
       atlas.rgba.set(f.rgba.subarray(y * FRAME * 4, (y + 1) * FRAME * 4), dst);

@@ -96,6 +96,21 @@ export function withPoseAlternate(status, sinceMs, nowMs, states, periodMs = POS
   return Math.floor((nowMs - sinceMs) / periodMs) % 2 === 1 ? alt : status;
 }
 
+/** 形象名去掉 `_alt` 后缀（界面文案用：idle_alt 也要显示成"待机"） */
+export function baseStatusName(status) {
+  return String(status || "").replace(/_alt$/, "");
+}
+
+/**
+ * 当前该显示哪个状态（宠物窗与主界面共用，免得两边各写一套）：
+ *   暂停 > 待机超时睡觉 > 待机/思考的两张形象轮换。
+ * states 传 manifest.states（没有 *_alt 键时自动不轮换）。
+ */
+export function resolvePetStatus(status, sinceMs, nowMs, states, paused) {
+  if (paused) return "paused";
+  return withPoseAlternate(withIdleSleep(status, sinceMs, nowMs), sinceMs, nowMs, states);
+}
+
 /** 精灵图动画器：bind 到 canvas，按状态名推帧（imageSmoothing 关闭保像素风） */
 export class SpriteAnimator {
   constructor(canvas, atlas, manifest) {

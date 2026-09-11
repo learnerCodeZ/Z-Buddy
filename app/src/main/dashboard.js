@@ -1,6 +1,6 @@
 // 总览页：大图与角落宠物同帧同步 + 状态卡 + 暂停 + 事件时间线
 import { invoke } from "../shared/api.js";
-import { loadPackByPref, SpriteAnimator, withIdleSleep, withPoseAlternate } from "../shared/pack.js";
+import { loadPackByPref, SpriteAnimator, resolvePetStatus, baseStatusName } from "../shared/pack.js";
 
 const statusEl = document.querySelector("#dash-status");
 const detailEl = document.querySelector("#dash-detail");
@@ -62,12 +62,12 @@ async function tick() {
     const s = JSON.parse(await invoke("read_state"));
     paused = !!s.paused;
     const sinceMs = Date.parse(s.since || "");
-    let status = paused ? "paused" : withIdleSleep(s.status || "sleep", sinceMs, Date.now());
-    if (!paused) status = withPoseAlternate(status, sinceMs, Date.now(), manifestStates);
+    // 与宠物窗共用同一套状态判定（shared/pack.js）
+    const status = resolvePetStatus(s.status || "sleep", sinceMs, Date.now(), manifestStates, paused);
     animator?.setStatus(status);
     statusEl.textContent = paused
       ? "已暂停 ⏸（点宠物或此处恢复）"
-      : (STATUS_LABEL[status] || status) + (s.detail ? ` · ${s.detail}` : "");
+      : (STATUS_LABEL[baseStatusName(status)] || status) + (s.detail ? ` · ${s.detail}` : "");
     detailEl.textContent = `最近事件：${s.last_event || "-"}`;
     sessionEl.textContent = `会话：${s.session_id || "-"}`;
     pauseBtn.textContent = paused ? "▶ 恢复 Agent" : "⏸ 暂停 Agent";

@@ -58,15 +58,13 @@ body {
 }
 
 /* ---- 状态修饰 ---- */
-#pet.working #pet-canvas {
-  animation: hop 0.5s ease-in-out infinite;
-}
+/* working / error / permission 的动作都在精灵图里（敲键盘 / 红灯闪 / 摇牌），
+   CSS 不再叠位移动画，否则会与精灵帧打架 */
 #pet.permission #pet-canvas {
-  animation: hop 0.5s ease-in-out infinite;
-  filter: drop-shadow(0 0 6px #ffd32a);
+  filter: drop-shadow(0 0 6px #ffd32a); /* 审批：黄色光晕提示"需要你处理" */
 }
-/* 睡觉：姿势 + Z 气泡已经表达清楚了，不再褪色（按用户要求去掉灰度） */
-/* 暂停：姿势与气泡已经表达清楚了，不再叠灰度（角标仍保留） */
+/* 睡觉：姿势 + Z 气泡已经表达清楚了，不褪色（按用户要求去掉灰度） */
+/* 暂停：姿势与暂停气泡已经表达清楚了，不叠灰度（角标仍保留） */
 #pet.paused-ui #pause-badge {
   display: block;
 }
@@ -76,14 +74,6 @@ body {
   animation: none;
   filter: none;
   transition: none;
-}
-#pet.paused-ui #pause-badge {
-  display: block;
-}
-
-@keyframes hop {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
 }
 
 /* ---- 悬停信息卡（贴在宠物上方：宠物顶边 CSS y=142，卡片底边 y=134）---- */

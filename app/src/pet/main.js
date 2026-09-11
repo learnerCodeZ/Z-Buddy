@@ -4,8 +4,8 @@ import {
   loadPackByPref,
   SpriteAnimator,
   pickDragState,
-  withIdleSleep,
-  withPoseAlternate,
+  resolvePetStatus,
+  baseStatusName,
 } from "../shared/pack.js";
 
 const pet = document.querySelector("#pet");
@@ -64,9 +64,8 @@ async function tick() {
       idleSinceLocal = null;
     }
     const sinceMs = Date.parse(s.since || "") || idleSinceLocal;
-    // 待机超时 → 睡觉；待机/思考各有两张形象，每 30 秒换一张（包里有 *_alt 才切）
-    let status = paused ? "paused" : withIdleSleep(raw, sinceMs, Date.now());
-    if (!paused) status = withPoseAlternate(status, sinceMs, Date.now(), pack?.manifest?.states);
+    // 暂停 > 待机超时睡觉 > 待机/思考两张形象轮换（逻辑在 shared/pack.js，与主界面共用一份）
+    const status = resolvePetStatus(raw, sinceMs, Date.now(), pack?.manifest?.states, paused);
     // 长按拖动期间动画由拖动形象接管，别让轮询把状态覆盖回去
     if (!dragState) {
       pet.className = paused ? "paused-ui" : status;
@@ -74,7 +73,7 @@ async function tick() {
     }
     statusEl.textContent = paused
       ? "已暂停 ⏸（点我恢复）"
-      : (STATUS_LABEL[status] || status) + (s.detail ? ` · ${s.detail}` : "");
+      : (STATUS_LABEL[baseStatusName(status)] || status) + (s.detail ? ` · ${s.detail}` : "");
     detailEl.textContent = `最近事件：${s.last_event || "-"}`;
   } catch (err) {
     statusEl.textContent = "读取失败";
@@ -149,7 +148,8 @@ function exitDragPose() {
   dragTimer = null;
   dragState = null;
   lastCursor = null;
-  if (pack) animator.setStatus(paused ? "paused" : "idle");
+  // 松开后立刻按真实状态重画，别硬编码成 idle（否则干活/思考时会闪一下错误姿势）
+  tick();
 }
 
 let downScreen = { x: 0, y: 0 };
