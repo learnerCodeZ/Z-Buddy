@@ -31,8 +31,13 @@ body {
   width: 192px;
   height: 192px;
   image-rendering: pixelated;
-  transition: filter 0.3s;
+  /* filter 过渡用于状态切换的柔和感；transform 过渡给"按下"即时反馈 */
+  transition: filter 0.3s, transform 0.12s;
   pointer-events: none;
+}
+/* 按下就有反馈（不必等长按判定），避免"按了半天没动静" */
+#pet:active #pet-canvas {
+  transform: scale(0.97);
 }
 
 /* 暂停角标 */
@@ -66,10 +71,12 @@ body {
 #pet.paused-ui #pet-canvas {
   filter: grayscale(0.9) brightness(0.75);
 }
-/* 长按拖动 = 换成拖动形象：姿态全在精灵图里，CSS 不再叠加位移/滤镜，否则会打架 */
+/* 长按拖动 = 换成拖动形象：姿态全在精灵图里，CSS 不再叠加位移/滤镜，否则会打架；
+   transition: none 很关键 —— 否则 0.3s 的滤镜过渡会把"变身"拖成慢动作 */
 #pet.dragging #pet-canvas {
   animation: none;
   filter: none;
+  transition: none;
 }
 #pet.paused-ui #pause-badge {
   display: block;

@@ -70,7 +70,7 @@ async function tick() {
 // 拖动形象（drag_left / drag_right）是静态单帧，只按拖动方向左右切换（另一侧是镜像）。
 // 方向判定放在 Rust 侧取光标位置（每 80ms 轮询）：原生拖动窗口时 WebView 收不到
 // mousemove（系统模态移动循环），但 JS 定时器照常跑，取光标最稳。
-const LONG_PRESS_MS = 220; // 按多久算"长按"，进入拖动形象
+const LONG_PRESS_MS = 150; // 按多久算"长按"，进入拖动形象（仍明显区别于单击）
 const DIR_DEAD = 9; // 累计位移超过它才改朝向（防抖、防边界抖动）
 let downPos = null;
 let moved = false;
@@ -81,6 +81,7 @@ let dragTimer = null;
 let accX = 0;
 let accY = 0;
 let lastCursor = null;
+let lastMouseScreen = null; // 最近一次 mousemove 的屏幕坐标（原生拖动接管前的方向线索）
 
 /** 当前宠物包有没有拖动形象行（外部包可能没有） */
 function hasDragRows() {
@@ -89,14 +90,17 @@ function hasDragRows() {
 
 function enterDragPose() {
   if (!hasDragRows() || dragState) return;
-  const first = pickDragState(lastCursor ? lastCursor.x - downScreen.x : 0, 0, "drag_left");
-  dragState = first === "drag_right" ? "drag_right" : "drag_left";
+  // 初始朝向：优先用"按下后已经移动的方向"——原生拖动接管之前 mousemove 还收得到；
+  // 完全没动就先给左向，紧接着的第一次光标采样会纠正（不再固定先显示左向）。
+  const hx = lastMouseScreen ? lastMouseScreen.x - downScreen.x : 0;
+  const hy = lastMouseScreen ? lastMouseScreen.y - downScreen.y : 0;
+  dragState = pickDragState(hx, hy, "drag_left") || "drag_left";
   accX = 0;
   accY = 0;
   lastCursor = null;
   pet.className = "dragging";
   animator.setStatus(dragState);
-  dragTimer = setInterval(async () => {
+  const sample = async () => {
     if (!dragState) return;
     try {
       const p = await invoke("cursor_pos");
@@ -118,7 +122,9 @@ function enterDragPose() {
     } catch {
       /* 预览/无该命令时静默 */
     }
-  }, 80);
+  };
+  sample(); // 立刻建立光标基准，别干等第一个 tick
+  dragTimer = setInterval(sample, 60); // 之后 60ms 一次
 }
 
 function exitDragPose() {
@@ -135,6 +141,7 @@ pet.addEventListener("mousedown", (e) => {
   if (e.button !== 0) return;
   downPos = { x: e.clientX, y: e.clientY };
   downScreen = { x: e.screenX, y: e.screenY };
+  lastMouseScreen = null;
   moved = false;
   longPressed = false;
   invoke("set_dragging", { on: true });
@@ -146,6 +153,9 @@ pet.addEventListener("mousedown", (e) => {
 });
 
 window.addEventListener("mousemove", (e) => {
+  // 记下最近一次鼠标屏幕位置：长按那一刻用它直接判朝向
+  // （原生拖动窗口会走系统模态循环，之后 mousemove 就收不到了）
+  if (downPos) lastMouseScreen = { x: e.screenX, y: e.screenY };
   if (!downPos || moved) return;
   if (Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 6) {
     moved = true;
