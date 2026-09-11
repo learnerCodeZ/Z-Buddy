@@ -1,0 +1,69 @@
+name: Build App (Windows)
+
+# 桌宠应用没有本地工具链也能出包：在 GitHub 的 windows runner 上构建
+# （runner 自带 MSVC + WebView2，前端是零构建的 vanilla JS，只需 Rust + Tauri CLI）
+#
+# 产物：便携版 z-buddy-app.exe + NSIS 安装包，作为 workflow artifact 上传（保留 30 天）。
+# 下载：Actions → 对应那次运行 → 页面底部 Artifacts。
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 安装 Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 缓存 Cargo 依赖与构建产物
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('app/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: 安装 Tauri CLI
+        working-directory: app
+        run: npm install
+
+      - name: 构建（便携版 exe + NSIS 安装包）
+        working-directory: app
+        run: npx tauri build
+
+      - name: 列出产物
+        shell: pwsh
+        run: |
+          Get-ChildItem app/src-tauri/target/release/z-buddy-app.exe,
+                        app/src-tauri/target/release/bundle/nsis/*.exe -ErrorAction SilentlyContinue |
+            ForEach-Object { '{0}    {1:N0} KB' -f $_.Name, ($_.Length / 1KB) }
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: z-buddy-app-windows
+          path: |
+            app/src-tauri/target/release/z-buddy-app.exe
+            app/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 30
