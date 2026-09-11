@@ -138,7 +138,9 @@ ZCode Agent
   实际做法是前端每 80ms 轮询 Rust 命令 `cursor_pos`（JS 定时器在拖动中照常运行），累计位移过阈值才换（防抖）；
 - 拖动期间 `#pet` 的 class 为 `dragging`，轮询的状态切换被抑制（`if (!dragState)`），避免 600ms 轮询把画面覆盖回去；
 - 外部宠物包没有拖动形象行时自动跳过（`hasDragRows()`）；
-- 生成方式见下：`--drag <立绘.png>`，工具自动抠背景 + 裁切 + 镜像，写入 row 4 / row 5（各 1 帧）。
+- 生成方式见下：`--drag <立绘.png>`，工具自动抠背景 + 裁切 + 镜像，写入 row 4 / row 5（各 1 帧）；
+- **镜像时字形要保持正**：`--drag-upright` 传字形矩形（源图坐标），镜像后按原方向贴回，
+  否则头顶的 Z、配饰里的字母会跟着翻反。
 
 ### hooks 事件全表（7 种）
 
@@ -184,10 +186,14 @@ node app/tools/gen_illustration_pet.mjs app/tools/source/<名>.png app/src/pets/
 
 # ②' 追加"长按拖动形象"两行（可选）：传一张单张立绘（不带动效）
 node app/tools/gen_illustration_pet.mjs app/tools/source/<名>.png app/src/pets/<名> \
-     --name <名> --title-hex <hex> --frame 192 --drag app/tools/source/<名>-drag.png
+     --name <名> --title-hex <hex> --frame 192 --drag app/tools/source/<名>-drag.png \
+     --drag-upright "683,0,838,148;697,148,762,178;686,712,744,768"
 # 工具会自动：抠白底（阈值 250，可用 --drag-bgmin 调）→ 裁切到内容包围盒
 # → 写入 drag_left(row4) / drag_right(row5)，各 1 帧；另一个方向是水平镜像
 # 素材默认"朝右"（原图给 drag_right、镜像给 drag_left）；若立绘本来就朝左，加 --drag-faces left
+# --drag-upright：若干**源图坐标**矩形（x0,y0,x1,y1;…）。整图镜像会把字形也翻反，
+#   这些矩形在镜像后按原方向贴回 ⇒ 鸭子反、字正。上面那串是夜羽的实测值
+#   （头顶 Z / Z 的卷尾 / 胸针心形里的 Z）；矩形只许覆盖字形，压到鸭子身上会留一块没镜像的补丁。
 
 # ③ 手工：行 = 状态（idle/working/error/sleep[/drag_left/drag_right]），参考 src/pets/mochi/pet.json
 ```

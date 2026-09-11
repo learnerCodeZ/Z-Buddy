@@ -18,10 +18,13 @@
  * 用法：
  *   node app/tools/gen_illustration_pet.mjs <源图.png> <输出目录> \
  *        [--name yoru] [--title 夜羽] [--frame 128] [--preview out.png] \
- *        [--split <源图行号>] [--no-ornament] [--drag <拖动立绘.png>] [--drag-faces right|left]
+ *        [--split <源图行号>] [--no-ornament] [--drag <拖动立绘.png>] [--drag-faces right|left] \
+ *        [--drag-upright "x0,y0,x1,y1;..."]
  *
  *   --drag：可选。传一张"拖动时显示的形象"（单张立绘、不带动效）。工具会抠背景、
  *   裁切到内容，并把 drag_left / drag_right 两行都写进去 —— 其中一个方向用水平镜像。
+ *   --drag-upright：可选。镜像会把字形（头顶的 Z、配饰里的字母）也翻反，这里给定
+ *   源图坐标下的矩形，镜像后把它们按原方向贴回，做到"鸭子反、字正"。
  *
  * 只导出（缩放后的）源图供入库复现：
  *   node app/tools/gen_illustration_pet.mjs <源图.png> --emit-source out.png [--emit-height 768]
@@ -596,6 +599,10 @@ function buildRowPlan() {
 // 长按拖动时换成这张形象。素材是单张立绘、本身不带动效，所以只做一件事：
 // 水平镜像一份给另一个朝向用（原图朝右 → drag_right，镜像 → drag_left；
 // 用 --drag-faces left 可反转这个假设）。
+//
+// 但整图镜像会把**字形**也镜像掉（头顶的 Z、配饰里的字母），看着是"反字"。
+// 所以支持 --drag-upright 指定若干矩形：镜像后把这些矩形按**原方向**贴回镜像位置，
+// 于是鸭子是镜像的、字是正的。
 
 /** 水平镜像 */
 export function flipHorizontal(img) {
@@ -611,6 +618,46 @@ export function flipHorizontal(img) {
       out[dst + 3] = rgba[src + 3];
     }
   return { w, h, rgba: out };
+}
+
+/** 解析 "x0,y0,x1,y1;x0,y0,x1,y1" 形式的矩形列表 */
+export function parseRegions(spec) {
+  if (typeof spec !== "string") return [];
+  return spec
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => {
+      const [x0, y0, x1, y1] = s.split(",").map(Number);
+      if ([x0, y0, x1, y1].some((v) => !Number.isFinite(v))) throw new Error(`--drag-upright 矩形格式错误: ${s}`);
+      return { x0, y0, x1, y1 };
+    });
+}
+
+/**
+ * 镜像，但把 regions（源图坐标）里的内容按原方向贴到**镜像后的位置** —— 字正、鸭子反。
+ * 注意：矩形要只覆盖字形本身（含一点余量），不要压到鸭子身上，否则会在身上留一块没镜像的补丁。
+ */
+export function mirrorKeepUpright(img, regions = []) {
+  const out = flipHorizontal(img);
+  const { w, h, rgba } = img;
+  for (const r of regions) {
+    const x0 = Math.max(0, Math.floor(r.x0));
+    const y0 = Math.max(0, Math.floor(r.y0));
+    const x1 = Math.min(w, Math.ceil(r.x1));
+    const y1 = Math.min(h, Math.ceil(r.y1));
+    const dstX0 = w - x1; // 镜像后该矩形左上角
+    for (let y = y0; y < y1; y++)
+      for (let x = x0; x < x1; x++) {
+        const so = (y * w + x) * 4;
+        const dofs = (y * w + dstX0 + (x - x0)) * 4;
+        out.rgba[dofs] = rgba[so];
+        out.rgba[dofs + 1] = rgba[so + 1];
+        out.rgba[dofs + 2] = rgba[so + 2];
+        out.rgba[dofs + 3] = rgba[so + 3];
+      }
+  }
+  return out;
 }
 
 // ============================ 预览图 ============================
@@ -751,23 +798,30 @@ function main() {
   const SIZE = FRAME * SS;
   const COLS = 6;
 
-  // ---- 拖动形象（可选，--drag <立绘.png>）：静态、无动效，只做左右镜像 ----
+  // ---- 拖动形象（可选，--drag <立绘.png>）：静态、无动效，左右镜像 ----
   let dragBases = null;
   if (typeof args.drag === "string") {
     const dimg = decodePNG(fs.readFileSync(args.drag));
     const dinfo = keyWhiteBackground(dimg, { bgMin: Number(args["drag-bgmin"] || 250) });
-    const dbox = alphaBBox(dimg);
-    const dcrop = crop(dimg, dbox.x0, dbox.y0, dbox.x1, dbox.y1);
-    const dbase = scaleTo(dcrop);
     const faces = typeof args["drag-faces"] === "string" ? args["drag-faces"] : "right";
+    const upRight = parseRegions(args["drag-upright"]);
+    const dbox = alphaBBox(dimg);
+    // 在**源图**上做镜像（这样 --drag-upright 的坐标就是源图坐标），再按对应的包围盒裁切，
+    // 保证两侧基准图尺寸完全一致（否则切换方向时鸭子会跳一下）。
+    const mirrored = mirrorKeepUpright(dimg, upRight);
+    const mbox = { x0: dimg.w - dbox.x1, y0: dbox.y0, x1: dimg.w - dbox.x0, y1: dbox.y1 };
+    const baseOf = (im, b) => scaleTo(crop(im, b.x0, b.y0, b.x1, b.y1));
+    const original = baseOf(dimg, dbox);
+    const flipped = baseOf(mirrored, mbox);
     dragBases =
       faces === "left"
-        ? { drag_left: dbase, drag_right: flipHorizontal(dbase) }
-        : { drag_left: flipHorizontal(dbase), drag_right: dbase };
+        ? { drag_left: original, drag_right: flipped }
+        : { drag_left: flipped, drag_right: original };
     console.log(
-      `拖动形象: 抠背景 ${dinfo.bgCount}px / 羽化 ${dinfo.feathered}px，裁切 ${dcrop.w}×${dcrop.h}` +
-        ` → 基准 ${dbase.w}×${dbase.h}（最终 ${Math.round(dbase.h / SS)}px 高）；` +
-        `原图朝${faces === "left" ? "左" : "右"}，另一侧用镜像`,
+      `拖动形象: 抠背景 ${dinfo.bgCount}px / 羽化 ${dinfo.feathered}px，裁切 ${dbox.x1 - dbox.x0}×${dbox.y1 - dbox.y0}` +
+        ` → 基准 ${original.w}×${original.h}（最终 ${Math.round(original.h / SS)}px 高）；` +
+        `原图朝${faces === "left" ? "左" : "右"}，另一侧用镜像；` +
+        (upRight.length ? `其中 ${upRight.length} 个矩形保持正字` : "未指定正字矩形（整图镜像）"),
     );
   }
 
