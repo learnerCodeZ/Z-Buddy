@@ -48,10 +48,7 @@ const COLS = 6;
 const ROWS = 10;
 const POSE_H = 140; // 各状态行的角色高度（帧内像素）——留出上方气泡空间
 const SLEEP_TOP_CUT_SRC = 76; // 睡姿自带 Z 的高度（源图行数），从基准图顶部切掉
-// 思考姿势里"手"的区域（相对姿势包围盒的比例）——**只框手、不碰下巴**，
-// 否则下巴会跟着动（用户反馈过这个 bug）。上图验证过：这个框在下巴下方。
-const HAND_BOX_REL = { x0: 0.33, y0: 0.42, x1: 0.5, y1: 0.53 };
-const HAND_RUB_PX = 1.8; // 手左右微动幅度（帧内像素）
+// 思考姿势里曾做过"手部左右微动"，按用户要求**已关闭**（提交 c8cb2f3 里可找回实现）
 
 const SRC = "app/tools/source";
 const FILES = {
@@ -280,28 +277,6 @@ function outlineGlyph(glyph, { outlinePx = 4, dark = [0x1d, 0x1b, 0x22], feather
   return { w, h, rgba: out };
 }
 
-/** 拆出"手/下巴"层：body 层把该矩形用上下边缘插值补掉，hand 层单独拿来做小幅位移 */
-function splitHand(base) {
-  const { w, h, rgba } = base;
-  const bx0 = Math.round(w * HAND_BOX_REL.x0);
-  const by0 = Math.round(h * HAND_BOX_REL.y0);
-  const bx1 = Math.round(w * HAND_BOX_REL.x1);
-  const by1 = Math.round(h * HAND_BOX_REL.y1);
-  const body = { w, h, rgba: Uint8Array.from(rgba) };
-  const hand = { w, h, rgba: new Uint8Array(rgba.length) };
-  for (let y = by0; y < by1; y++)
-    for (let x = bx0; x < bx1; x++) {
-      const o = (y * w + x) * 4;
-      for (let k = 0; k < 4; k++) hand.rgba[o + k] = rgba[o + k];
-      // body：用该列上下边缘（框外）线性插值补洞
-      const above = ((Math.max(0, by0 - 1)) * w + x) * 4;
-      const below = ((Math.min(h - 1, by1)) * w + x) * 4;
-      const t = (y - by0 + 1) / (by1 - by0 + 1);
-      for (let k = 0; k < 4; k++) body.rgba[o + k] = Math.round(rgba[above + k] * (1 - t) + rgba[below + k] * t);
-    }
-  return { body, hand, box: { bx0, by0, bx1, by1 } };
-}
-
 /** 提亮字形（素材里的 "?" 偏灰，深色桌面上不够醒目） */
 function brighten(glyph, gain = 1.35, lift = 20) {
   const out = { w: glyph.w, h: glyph.h, rgba: new Uint8Array(glyph.rgba.length) };
@@ -443,30 +418,26 @@ function main() {
     console.log(`idle: 两张站姿各一行（row0 / row8），运行期每 30 秒切换（${A.w}×${A.h} / ${B.w}×${B.h}）`);
   }
 
-  // ---------- 4) thinking：两张思考姿势各一行 + "?" 气泡 + 手部小幅搓下巴 ----------
+  // ---------- 4) thinking：两张思考姿势各一行 + "?" 气泡（手部动效已按用户要求关闭）----------
   {
-    const A = splitHand(poseBase(sheets.idleA.img, sheets.idleA.poses[2].box));
-    const B = splitHand(poseBase(sheets.idleB.img, sheets.idleB.poses[2].box));
+    const A = poseBase(sheets.idleA.img, sheets.idleA.poses[2].box);
+    const B = poseBase(sheets.idleB.img, sheets.idleB.poses[2].box);
     // 姿势自带一个 Z（在头顶偏右），所以 "?" 排在**左上**，别和它挤在一起
     const slots = [
       { x: 26, y: 30 },
       { x: 56, y: 30 },
       { x: 86, y: 30 },
     ];
-    const geom = { size: SIZE, ss: SS, bottom: SIZE - PAD_BOTTOM * SS };
     for (let k = 0; k < COLS; k++) {
-      const rub = Math.sin((2 * Math.PI * k) / COLS) * HAND_RUB_PX; // 手左右微动
       const b = breath(k, COLS, 2.2);
-      for (const [row, layer] of [
+      for (const [row, base] of [
         [6, A],
         [9, B],
       ]) {
         putFrame(
           row,
           k,
-          render(layer.body, b, (raw) => {
-            const handRaw = renderFrame(layer.hand, { ...b, dx: rub }, geom);
-            alphaOver(raw, SIZE, { w: SIZE, h: SIZE, rgba: handRaw }, 0, 0);
+          render(base, b, (raw) => {
             for (const bb of bubblesAt(3, k, COLS, slots, { rise: 2 })) {
               if (bb.alpha > 0.01) stamp(raw, qGlyph, { x: bb.x, y: bb.y, size: 24 * bb.pop, alpha: bb.alpha });
             }
@@ -474,9 +445,7 @@ function main() {
         );
       }
     }
-    console.log(
-      `thinking: 两张思考姿势各一行（row6 / row9，每 30 秒切换）+ "?" 气泡 + 手部左右微动（±${HAND_RUB_PX}px，只框手不碰下巴）`,
-    );
+    console.log(`thinking: 两张思考姿势各一行（row6 / row9，每 30 秒切换）+ "?" 气泡（无手部动效）`);
   }
 
   // ---------- 5) sleep：睡姿 + Z 气泡（上下 3 个）----------
