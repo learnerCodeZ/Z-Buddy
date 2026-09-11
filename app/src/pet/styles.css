@@ -65,9 +65,7 @@ body {
   animation: hop 0.5s ease-in-out infinite;
   filter: drop-shadow(0 0 6px #ffd32a);
 }
-#pet.sleep #pet-canvas {
-  filter: grayscale(0.6) brightness(0.85);
-}
+/* 睡觉：姿势 + Z 气泡已经表达清楚了，不再褪色（按用户要求去掉灰度） */
 /* 暂停：姿势与气泡已经表达清楚了，不再叠灰度（角标仍保留） */
 #pet.paused-ui #pause-badge {
   display: block;

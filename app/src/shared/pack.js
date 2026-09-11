@@ -68,6 +68,19 @@ export function pickDragState(dx, dy, current = null) {
   return current;
 }
 
+/** 待机超过多久算睡着（用户要求 5 分钟） */
+export const IDLE_SLEEP_MS = 5 * 60 * 1000;
+
+/**
+ * 待机超时 → 睡觉：状态是 idle 且已持续超过 thresholdMs 时返回 "sleep"。
+ * sinceMs 取 state.json 的 since（进状态的时间），无效时传 null（保持原状态）。
+ */
+export function withIdleSleep(status, sinceMs, nowMs, thresholdMs = IDLE_SLEEP_MS) {
+  if (status !== "idle") return status;
+  if (!Number.isFinite(sinceMs)) return status;
+  return nowMs - sinceMs >= thresholdMs ? "sleep" : status;
+}
+
 /** 精灵图动画器：bind 到 canvas，按状态名推帧（imageSmoothing 关闭保像素风） */
 export class SpriteAnimator {
   constructor(canvas, atlas, manifest) {

@@ -1,6 +1,6 @@
 // Z-Buddy 宠物窗：精灵动画 + 状态轮询 + 点按暂停 + 拖动 + 右键菜单
 import { invoke, listen } from "../shared/api.js";
-import { loadPackByPref, SpriteAnimator, pickDragState } from "../shared/pack.js";
+import { loadPackByPref, SpriteAnimator, pickDragState, withIdleSleep } from "../shared/pack.js";
 
 const pet = document.querySelector("#pet");
 const canvas = document.querySelector("#pet-canvas");
@@ -44,13 +44,21 @@ listen("pet-changed", async (e) => {
 
 // ---- 状态轮询 ----
 let paused = false;
+let idleSinceLocal = null; // state.json 没有 since 时的本地兜底计时
 
 async function tick() {
   try {
     const s = JSON.parse(await invoke("read_state"));
     paused = !!s.paused;
-    // 暂停 = 独立状态行（蜷缩姿势 + 暂停气泡）；class 仍用 paused-ui 以显示角标
-    const status = paused ? "paused" : s.status || "sleep";
+    const raw = s.status || "sleep";
+    // 待机超时（默认 5 分钟）→ 睡觉。优先用插件给的 since（跨重启也准），没有就本地计时
+    if (raw === "idle") {
+      if (idleSinceLocal === null) idleSinceLocal = Date.now();
+    } else {
+      idleSinceLocal = null;
+    }
+    const sinceMs = Date.parse(s.since || "") || idleSinceLocal;
+    const status = paused ? "paused" : withIdleSleep(raw, sinceMs, Date.now());
     // 长按拖动期间动画由拖动形象接管，别让轮询把状态覆盖回去
     if (!dragState) {
       pet.className = paused ? "paused-ui" : status;

@@ -1,6 +1,6 @@
 // 总览页：大图与角落宠物同帧同步 + 状态卡 + 暂停 + 事件时间线
 import { invoke } from "../shared/api.js";
-import { loadPackByPref, SpriteAnimator } from "../shared/pack.js";
+import { loadPackByPref, SpriteAnimator, withIdleSleep } from "../shared/pack.js";
 
 const statusEl = document.querySelector("#dash-status");
 const detailEl = document.querySelector("#dash-detail");
@@ -58,7 +58,7 @@ async function tick() {
   try {
     const s = JSON.parse(await invoke("read_state"));
     paused = !!s.paused;
-    const status = paused ? "paused" : s.status || "sleep";
+    const status = paused ? "paused" : withIdleSleep(s.status || "sleep", Date.parse(s.since || ""), Date.now());
     animator?.setStatus(status);
     statusEl.textContent = paused
       ? "已暂停 ⏸（点宠物或此处恢复）"
