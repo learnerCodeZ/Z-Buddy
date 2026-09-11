@@ -131,8 +131,9 @@ ZCode Agent
   宠物包没有这些键时自动降级为普通状态动画；
 - **气泡（Z / ? / 暂停）烘焙进精灵图帧**：队列语义（最多 N 个、依次出现、最早的先消失、
   上下或并排排列）都在构建期合成，运行时不额外绘制 → 应用代码零改动；
-- 夜羽当前是 **6 列 × 10 行**（`idle/working/error/sleep/drag_left/drag_right/thinking/paused/idle_alt/thinking_alt`），
-  图集 1152×1920；working/permission/error 仍用旧立绘（用户未指定这三个状态的新姿势）；
+- 夜羽当前是 **6 列 × 11 行**（`idle/working/error/sleep/drag_left/drag_right/thinking/paused/idle_alt/thinking_alt/permission`），
+  图集 1152×2112：`working` 3 张敲键盘姿势循环（fps 8 ≈ 125ms/张）、`error` 红灯亮/暗 2 帧（fps 2 = 500ms 一闪）、
+  `permission` 举牌左倾/右倾 2 帧（fps 2 = 500ms 换边）；三者都是**整张姿势轮换**，不需要局部动效；
 - 思考行**没有**手部动效（曾做过"手部左右微动 ±1.8px"，按用户要求已关闭；
   实现保留在提交 `c8cb2f3` 里，需要时取回：把姿势按手部矩形拆成 body + hand 两层，
   hand 做横向位移，body 的空洞用上下边缘插值补掉 —— 注意矩形**只许框手、不能碰下巴**）；

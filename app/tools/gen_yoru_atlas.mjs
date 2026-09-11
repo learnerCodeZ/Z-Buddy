@@ -27,10 +27,8 @@ import {
   decodePNG,
   encodePNG,
   keyWhiteBackground,
-  rowCounts,
   alphaBBox,
   crop,
-  findOrnamentSplit,
   resizeArea,
   renderFrame,
   boxDown,
@@ -45,18 +43,20 @@ const SS = 4;
 const SIZE = FRAME * SS;
 const PAD_BOTTOM = 6;
 const COLS = 6;
-const ROWS = 10;
+const ROWS = 11;
 const POSE_H = 140; // 各状态行的角色高度（帧内像素）——留出上方气泡空间
 const SLEEP_TOP_CUT_SRC = 76; // 睡姿自带 Z 的高度（源图行数），从基准图顶部切掉
 // 思考姿势里曾做过"手部左右微动"，按用户要求**已关闭**（提交 c8cb2f3 里可找回实现）
 
 const SRC = "app/tools/source";
 const FILES = {
-  legacy: `${SRC}/yoru.png`, // 旧立绘（working / error 行）
   idleA: `${SRC}/yoru-pose1.png`, // 图1：站姿 / 睡姿 / 思考
   idleB: `${SRC}/yoru-pose2.png`, // 图2
   pause: `${SRC}/yoru-pose3.png`, // 图3
   thinkQ: `${SRC}/yoru-pose4.png`, // 图4（含 "?" 字形）
+  err: `${SRC}/yoru-err.png`, // 出错：举红叉按钮（亮/暗两张）
+  typing: `${SRC}/yoru-type.png`, // 干活：敲键盘（3 张）
+  perm: `${SRC}/yoru-perm.png`, // 审批：举"请审批"牌子（左倾/右倾两张）
   swan: `${SRC}/yoru-drag.png`, // 天鹅拖动形象
 };
 
@@ -118,7 +118,7 @@ function eraseRect(img, r) {
     for (let x = Math.max(0, r.x0); x < Math.min(img.w, r.x1); x++) img.rgba[(y * img.w + x) * 4 + 3] = 0;
 }
 
-/** 一张姿势图 → 3 个姿势（剔除底部标签条，按本体中心分区） */
+/** 一张姿势图 → N 个姿势（2 或 3 个；剔除底部标签带，按本体中心分区） */
 function sheetPoses(img) {
   const { w, h, rgba } = img;
   const A = (x, y) => rgba[(y * w + x) * 4 + 3];
@@ -134,12 +134,45 @@ function sheetPoses(img) {
     .sort((a, b) => b.n - a.n)
     .slice(0, 3)
     .sort((a, b) => a.x0 + a.x1 - (b.x0 + b.x1));
-  if (bodies.length < 3) throw new Error(`姿势图只找到 ${bodies.length} 个本体，预期 3 个`);
-  const centers = bodies.map((b) => (b.x0 + b.x1) / 2);
+  // 分区锚点优先用"顶部 40%（头部区域）的列剖面"：底部键盘/道具粘成一片也能正确切开；
+  // 头部区域至少要 2 段，否则退回"深色大块"的老办法
+  const topH = Math.round(h * 0.4);
+  const has = new Uint8Array(w);
+  for (let x = 0; x < w; x++) {
+    let c = 0;
+    for (let y = 0; y < topH; y++) if (A(x, y) > 20) c++;
+    has[x] = c >= 3 ? 1 : 0;
+  }
+  const raw = [];
+  let s0 = -1;
+  for (let x = 0; x <= w; x++) {
+    const v = x < w ? has[x] : 0;
+    if (v && s0 < 0) s0 = x;
+    else if (!v && s0 >= 0) {
+      raw.push([s0, x]);
+      s0 = -1;
+    }
+  }
+  const mergedBands = [];
+  for (const b of raw) {
+    const last = mergedBands[mergedBands.length - 1];
+    if (last && b[0] - last[1] < w * 0.03) last[1] = b[1];
+    else mergedBands.push([...b]);
+  }
+  const headBands = mergedBands.filter(([a, b]) => b - a > w * 0.05).slice(0, 3);
+  // 优先用"深色大块"（站姿/举牌这类能分开）；它少于 2 个时才退回头部剖面
+  // （敲键盘那种底部道具粘成一片的情况）
+  const useHeads = bodies.length < 2 && headBands.length >= 2;
+  if (useHeads) console.log(`  （深色本体粘连，改用头部区域列剖面分区：${headBands.length} 段）`);
+  const centers = useHeads
+    ? headBands.map(([a, b]) => (a + b) / 2)
+    : bodies.map((b) => (b.x0 + b.x1) / 2);
+  const n = centers.length;
+  if (n < 2) throw new Error(`姿势图只找到 ${n} 个本体（预期 2~3 个）`);
   const poses = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < n; i++) {
     const left = i === 0 ? 0 : Math.round((centers[i] + centers[i - 1]) / 2);
-    const right = i === 2 ? w : Math.round((centers[i] + centers[i + 1]) / 2);
+    const right = i === n - 1 ? w : Math.round((centers[i] + centers[i + 1]) / 2);
     let bx0 = right;
     let by0 = h;
     let bx1 = left;
@@ -367,12 +400,12 @@ function main() {
 
   // ---------- 1) 姿势图 ----------
   const sheets = {};
-  for (const key of ["idleA", "idleB", "pause", "thinkQ"]) {
+  for (const key of ["idleA", "idleB", "pause", "thinkQ", "err", "typing", "perm"]) {
     const img = decodePNG(fs.readFileSync(FILES[key]));
     keyWhiteBackground(img, { bgMin: 250 });
     sheets[key] = { img, poses: sheetPoses(img) };
     console.log(
-      `${FILES[key].split("/").pop()}: 切出 3 个姿势 ` +
+      `${FILES[key].split("/").pop()}: 切出 ${sheets[key].poses.length} 个姿势 ` +
         sheets[key].poses.map((p) => `${p.box.x1 - p.box.x0}×${p.box.y1 - p.box.y0}`).join(" / "),
     );
   }
@@ -384,27 +417,25 @@ function main() {
   const pauseGlyph = drawPauseGlyph();
   console.log(`气泡字形: Z ${zGlyph.w}×${zGlyph.h}, ? ${qGlyph.w}×${qGlyph.h}, 暂停 ${pauseGlyph.w}×${pauseGlyph.h}（程序绘制）`);
 
-  // ---------- 2) 旧立绘（working / error 行）----------
+  // ---------- 2) working / error / permission：各用专门的姿势图 ----------
   {
-    const legacy = decodePNG(fs.readFileSync(FILES.legacy));
-    keyWhiteBackground(legacy);
-    const counts = rowCounts(legacy);
-    const bbox = alphaBBox(legacy);
-    const split = findOrnamentSplit(counts, bbox);
-    const bodyTop = split > bbox.y0 && split < bbox.y1 ? split : bbox.y0;
-    const body = crop(legacy, bbox.x0, bodyTop, bbox.x1, bbox.y1);
-    const h = Math.round(POSE_H * SS);
-    const base = resizeArea(body, Math.max(1, Math.round((body.w * h) / body.h)), h);
-    console.log(`旧立绘基准: ${base.w}×${base.h}（working / error 行沿用，未在需求里指定）`);
-    for (let k = 0; k < COLS; k++) {
-      // working：蹦跳 + 摆头
-      const c = Math.cos((2 * Math.PI * k) / COLS);
-      const s = Math.sin((2 * Math.PI * k) / COLS);
-      putFrame(1, k, render(base, { dy: -2.75 - 1.75 * c, sx: 1 + 0.01 * c, sy: 1 - 0.02 * c, rot: 2.5 * s }));
-      // error：2 倍频抖动 + 去色
-      const s2 = Math.sin((4 * Math.PI * k) / COLS);
-      putFrame(2, k, render(base, { dx: 2.4 * s2, rot: 3 * s2, sy: 0.995 }), { error: true });
-    }
+    // working（干活中）：3 张敲键盘姿势循环 → 手指敲键盘的动效
+    const typing = sheets.typing.poses;
+    const bases = typing.map((p) => poseBase(sheets.typing.img, p.box));
+    for (let k = 0; k < bases.length; k++) putFrame(1, k, render(bases[k], {}));
+    console.log(
+      `working: ${bases.length} 张敲键盘姿势循环，fps 8（每个姿势 ${(1000 / 8).toFixed(0)}ms，一轮 ${((bases.length * 1000) / 8).toFixed(0)}ms）`,
+    );
+
+    // error（出错了）：红灯亮/暗两张交替 → 0.5 秒一次闪烁
+    const errBases = sheets.err.poses.map((p) => poseBase(sheets.err.img, p.box));
+    for (let k = 0; k < errBases.length; k++) putFrame(2, k, render(errBases[k], {}));
+    console.log(`error: 红灯亮/暗交替，fps 2（每 500ms 闪一次）`);
+
+    // permission（等你审批）：牌子左倾/右倾两张交替 → 0.5 秒一次摇晃
+    const permBases = sheets.perm.poses.map((p) => poseBase(sheets.perm.img, p.box));
+    for (let k = 0; k < permBases.length; k++) putFrame(10, k, render(permBases[k], {}));
+    console.log(`permission: 牌子左右摇，fps 2（每 500ms 换边）`);
   }
 
   // ---------- 3) idle：两张站姿各占一行（运行期每 30 秒换一行）----------
@@ -529,9 +560,8 @@ function main() {
     frame: { w: FRAME, h: FRAME },
     states: {
       idle: { row: 0, frames: COLS, fps: 4 },
-      working: { row: 1, frames: COLS, fps: 12 },
-      permission: { row: 1, frames: COLS, fps: 12 },
-      error: { row: 2, frames: COLS, fps: 9 },
+      working: { row: 1, frames: 3, fps: 8 }, // 3 张敲键盘姿势循环（125ms/张）
+      error: { row: 2, frames: 2, fps: 2 }, // 红灯亮/暗，500ms 一闪
       sleep: { row: 3, frames: COLS, fps: 5 },
       drag_left: { row: 4, frames: 1, fps: 1 },
       drag_right: { row: 5, frames: 1, fps: 1 },
@@ -540,13 +570,15 @@ function main() {
       // 运行期每 30 秒切换的第二张形象（见 shared/pack.js 的 withPoseAlternate）
       idle_alt: { row: 8, frames: COLS, fps: 4 },
       thinking_alt: { row: 9, frames: COLS, fps: 5 },
+      permission: { row: 10, frames: 2, fps: 2 }, // 牌子左右摇，500ms 换边
     },
   };
   fs.writeFileSync(path.join(outDir, "pet.json"), JSON.stringify(manifest, null, 2) + "\n");
   const kb = (fs.statSync(path.join(outDir, "atlas.png")).size / 1024).toFixed(0);
   console.log(`\n已生成: ${outDir}/atlas.png (${atlas.w}×${atlas.h}, ${kb} KB)`);
   console.log(
-    `已生成: ${outDir}/pet.json（10 行；idle/idle_alt 与 thinking/thinking_alt 由运行期每 30 秒切换）`,
+    `已生成: ${outDir}/pet.json（11 行；idle↔idle_alt / thinking↔thinking_alt 每 30 秒切换；` +
+      `working 敲键盘 3 帧、error 红灯 2 帧、permission 摇牌 2 帧均为 500ms 级节奏）`,
   );
 }
 

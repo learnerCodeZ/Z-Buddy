@@ -16,18 +16,13 @@
     },
     "working": {
       "row": 1,
-      "frames": 6,
-      "fps": 12
-    },
-    "permission": {
-      "row": 1,
-      "frames": 6,
-      "fps": 12
+      "frames": 3,
+      "fps": 8
     },
     "error": {
       "row": 2,
-      "frames": 6,
-      "fps": 9
+      "frames": 2,
+      "fps": 2
     },
     "sleep": {
       "row": 3,
@@ -63,6 +58,11 @@
       "row": 9,
       "frames": 6,
       "fps": 5
+    },
+    "permission": {
+      "row": 10,
+      "frames": 2,
+      "fps": 2
     }
   }
 }
