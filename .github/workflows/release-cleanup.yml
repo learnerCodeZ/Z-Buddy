@@ -1,0 +1,44 @@
+name: Release Cleanup
+
+# 删掉各 Release 上「版本号与 tag 不符」的安装包。
+# 起因：构建工作流缓存了 app/src-tauri/target，缓存里带着上一版的
+# bundle/nsis/Z-Buddy_<旧版本>_x64-setup.exe，通配符把它一起传进了新 Release，
+# 会让人下错文件。构建侧已加"构建前清掉旧安装包"，这里负责把已经发出去的清干净。
+#
+# 触发：改本文件时自动跑一次；也可手动 workflow_dispatch。
+# 只删 Z-Buddy_<版本>_x64-setup.exe 且版本与 tag 不符的资产，不动别的。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-cleanup.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 清理与 tag 版本不符的安装包
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -u
+          changed=0
+          for tag in $(gh release list --limit 50 --json tagName --jq '.[].tagName'); do
+            ver="${tag#v}"
+            for asset in $(gh release view "$tag" --json assets --jq '.assets[].name'); do
+              case "$asset" in
+                Z-Buddy_*_x64-setup.exe)
+                  if ! printf '%s' "$asset" | grep -qF "$ver"; then
+                    echo "删除 $tag 上的旧资产：$asset"
+                    gh release delete-asset "$tag" "$asset" --yes && changed=$((changed+1))
+                  fi
+                  ;;
+              esac
+            done
+          done
+          echo "共清理 $changed 个资产"
