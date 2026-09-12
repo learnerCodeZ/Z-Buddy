@@ -54,6 +54,11 @@ jobs:
         working-directory: app
         run: npm install
 
+      - name: 清掉缓存带过来的旧安装包
+        shell: pwsh
+        # 缓存里带着上一版的 bundle/nsis/*.exe，不清掉会被下面的通配符当成本次产物传上去
+        run: Remove-Item app/src-tauri/target/release/bundle/nsis/*.exe -ErrorAction SilentlyContinue
+
       - name: 构建（便携版 exe + NSIS 安装包）
         working-directory: app
         run: npx tauri build
@@ -78,6 +83,20 @@ jobs:
       # 打 v* tag 时同时发一个 GitHub Release（便携版 + NSIS 安装包）。
       # latest.json 不在这里生成：它需要私钥签名，由本地 scripts/gen-latest-json.mjs
       # 产出后提交到 website/public/，随官网 CI 发布到 Pages（也就是更新源）。
+      - name: 清理 Release 上不属于本版本的旧安装包
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ver = '${{ github.ref_name }}'.TrimStart('v')
+          gh release view '${{ github.ref_name }}' --json assets --jq '.assets[].name' 2>$null | ForEach-Object {
+            if ($_ -match '^Z-Buddy_.+_x64-setup\.exe$' -and $_ -notmatch [regex]::Escape($ver)) {
+              Write-Host "删除旧资产: $_"
+              gh release delete-asset '${{ github.ref_name }}' $_ --yes
+            }
+          }
+
       - name: 发布到 GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2

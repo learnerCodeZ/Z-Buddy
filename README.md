@@ -4,7 +4,18 @@
 
 🌐 **官网（下载 / 文档 / 宠物画廊）**：<https://learnercodez.github.io/Z-Buddy/>（站点源码在本仓库 `website/` 目录）
 
-🚧 **项目状态：立项与调研完成，开发尚未启动**（Phase 0 技术验证待跑）。欢迎 Star 围观，Issue 区畅聊想法。
+🚧 **项目状态**：桌面应用与插件已可用，**v0.2.0 已发布**（详见下方下载步骤）。
+
+---
+
+## 快速开始（三步）
+
+1. **下载桌宠应用** → <https://github.com/learnerCodeZ/Z-Buddy/releases/latest>
+   （`Z-Buddy_0.2.0_x64-setup.exe` 安装版，或 `z-buddy-app.exe` 免安装版。未做代码签名，SmartScreen 弹窗时点"更多信息 → 仍要运行"）
+2. **装 ZCode 插件**（让宠物跟着 Agent 动）→ ZCode → 设置 → 插件市场 → 添加市场 → **GitHub → `learnerCodeZ/Z-Buddy`** → 安装 `z-buddy` → **新建会话**（hooks 只对新会话生效）
+3. **打开桌宠**：默认形象是插画宠物 **夜羽**，会按 Agent 状态切换 11 套动作（敲键盘 / 红灯闪 / 摇牌 / Z 气泡 / ? 气泡……）；单击暂停 Agent，**长按可以把它拎起来拖走**
+
+> 已装 v0.1.0 的用户：那一版没编译自动更新，需要手动装一次 v0.2.0，之后才能在应用内点 🔄 升级。
 
 ---
 

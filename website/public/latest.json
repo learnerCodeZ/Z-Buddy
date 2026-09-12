@@ -1,0 +1,11 @@
+{
+  "version": "0.2.0",
+  "notes": "Z-Buddy v0.2.0 更新",
+  "pub_date": "2026-09-12T05:29:16Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRVjJGa3k0dERydERiejUvNG9jQ2tMcFMyZGVsQ2l5VXFwVmxSWDJGL2VIME1MTTUxQUVhSlRzQUU2RDk2M1k0cUZPd3pRUnoremFLZ0pXbUowTktqelVyd3RqZ1BRZVFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5MTkwOTU2CWZpbGU6Wi1CdWRkeV8wLjIuMF94NjQtc2V0dXAuZXhlCi96dWt3VmQydWo4RkxHOUU4QUwwOUdDR3h4bjZCRE4ya0RpTVhDeUhyQ05sRUJuNnFwRTJqZUx4WC9pQXUwa25tYmp5cnNRRDBQNmxhODBOUUdYUkFRPT0K",
+      "url": "https://github.com/learnerCodeZ/Z-Buddy/releases/download/v0.2.0/Z-Buddy_0.2.0_x64-setup.exe"
+    }
+  }
+}

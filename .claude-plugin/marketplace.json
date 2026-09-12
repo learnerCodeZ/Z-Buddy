@@ -1,0 +1,26 @@
+{
+  "name": "z-buddy",
+  "description": "Z-Buddy marketplace: install the z-buddy plugin that bridges ZCode agent state to the Z-Buddy desktop pet.",
+  "description_i18n": {
+    "en": "Z-Buddy marketplace: install the z-buddy plugin that bridges ZCode agent state to the Z-Buddy desktop pet.",
+    "zh-CN": "Z-Buddy 市场：安装 z-buddy 插件，把 ZCode 的 Agent 状态桥接给 Z-Buddy 桌宠。"
+  },
+  "owner": {
+    "name": "learnerCodeZ"
+  },
+  "plugins": [
+    {
+      "name": "z-buddy",
+      "source": "./marketplace/z-buddy",
+      "description": "ZCode desktop pet bridge: agent lifecycle reporting + pet pause button.",
+      "description_i18n": {
+        "en": "ZCode desktop pet bridge: agent lifecycle reporting + pet pause button.",
+        "zh-CN": "ZCode 桌宠桥接：Agent 生命周期上报 + 点桌宠暂停。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "learnerCodeZ"
+      }
+    }
+  ]
+}

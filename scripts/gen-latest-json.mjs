@@ -41,7 +41,11 @@ const cli = path.resolve("app/node_modules/@tauri-apps/cli/tauri.js");
 if (!fs.existsSync(cli)) die(`未安装 Tauri CLI：${cli}（先 cd app && npm install）`);
 
 console.log(`签名 ${path.basename(installer)} …`);
-execFileSync(process.execPath, [cli, "signer", "sign", "-f", keyPath, installer], { stdio: "inherit" });
+// -p "" 不可省：不带密码参数时 CLI 会**交互式索要密码**从而挂住。
+// Node 的 execFileSync 不经 shell，空字符串会原样传给 CLI（在 PowerShell 里直接调则会被吞掉）。
+execFileSync(process.execPath, [cli, "signer", "sign", "-f", keyPath, "-p", "", installer], {
+  stdio: "inherit",
+});
 
 const sigPath = `${installer}.sig`;
 if (!fs.existsSync(sigPath)) die(`签名失败：没有生成 ${sigPath}`);
