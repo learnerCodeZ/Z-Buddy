@@ -1,4 +1,4 @@
-name: Build App (Windows)
+﻿name: Build App (Windows)
 
 # 桌宠应用没有本地工具链也能出包：在 GitHub 的 windows runner 上构建
 # （runner 自带 MSVC + WebView2，前端是零构建的 vanilla JS，只需 Rust + Tauri CLI）
@@ -69,6 +69,15 @@ jobs:
           Get-ChildItem app/src-tauri/target/release/z-buddy-app.exe,
                         app/src-tauri/target/release/bundle/nsis/*.exe -ErrorAction SilentlyContinue |
             ForEach-Object { '{0}    {1:N0} KB' -f $_.Name, ($_.Length / 1KB) }
+
+      - name: 生成 SHA256SUMS.txt（官网页承诺的校验文件）
+        shell: pwsh
+        run: |
+          $dir = 'app/src-tauri/target/release'
+          $files = Get-ChildItem "$dir/z-buddy-app.exe", "$dir/bundle/nsis/*.exe" -ErrorAction SilentlyContinue
+          $lines = $files | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name }
+          $lines | Set-Content "$dir/SHA256SUMS.txt" -Encoding utf8
+          $lines | ForEach-Object { $_ }
 
       - name: 上传产物
         uses: actions/upload-artifact@v4
