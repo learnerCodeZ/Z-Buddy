@@ -1,6 +1,6 @@
 [package]
 name = "z-buddy-app"
-version = "0.1.0"
+version = "0.2.0"
 description = "Z-Buddy desktop pet for ZCode"
 authors = ["learnerCodeZ"]
 edition = "2021"

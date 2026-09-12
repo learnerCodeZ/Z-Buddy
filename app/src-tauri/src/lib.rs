@@ -66,7 +66,8 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
-        // .plugin(tauri_plugin_updater::Builder::new().build())  // TODO: 待 Tauri updater 稳定后启用（当前版本 schema 报错）
+        // 自动更新：检查/下载/安装（命令见 commands.rs 的 check_update / install_update）
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::read_state,
@@ -86,7 +87,9 @@ pub fn run() {
             commands::open_external,
             commands::popup_pet_menu,
             commands::open_local_dir,
-            commands::get_pets_dir
+            commands::get_pets_dir,
+            commands::check_update,
+            commands::install_update
         ])
         // 宠物右键菜单（popup_pet_menu 弹出的 pet_* 项）走这里
         .on_menu_event(|app, event| match event.id().as_ref() {

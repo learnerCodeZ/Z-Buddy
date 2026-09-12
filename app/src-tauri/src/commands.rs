@@ -258,9 +258,43 @@ pub fn read_events_total() -> usize {
         .unwrap_or(0)
 }
 
-// ---- 应用更新（暂未启用，待 tauri-plugin-updater 稳定后放开）----
-//
-// #[tauri::command]
-// pub async fn check_update(app: tauri::AppHandle) -> serde_json::Value { ... }
-// #[tauri::command]
-// pub async fn install_update(app: tauri::AppHandle) -> String { ... }
+// ---- 应用更新（tauri-plugin-updater，v0.2.0 起启用）----
+
+/// 检查更新：主界面启动时调用，有新版才显示标题栏的更新按钮。
+/// 出错（断网/未配置）一律返回 available:false，前端静默跳过。
+#[tauri::command]
+pub async fn check_update(app: tauri::AppHandle) -> serde_json::Value {
+    use tauri_plugin_updater::UpdaterExt;
+    let updater = match app.updater() {
+        Ok(u) => u,
+        Err(e) => return json!({ "available": false, "error": e.to_string() }),
+    };
+    match updater.check().await {
+        Ok(Some(update)) => json!({
+            "available": true,
+            "version": update.version,
+            "current": update.current_version,
+            "notes": update.body,
+        }),
+        Ok(None) => json!({ "available": false }),
+        Err(e) => json!({ "available": false, "error": e.to_string() }),
+    }
+}
+
+/// 下载并安装更新；NSIS 安装器会自行结束旧进程并重启应用
+#[tauri::command]
+pub async fn install_update(app: tauri::AppHandle) -> serde_json::Value {
+    use tauri_plugin_updater::UpdaterExt;
+    let updater = match app.updater() {
+        Ok(u) => u,
+        Err(e) => return json!({ "ok": false, "error": e.to_string() }),
+    };
+    match updater.check().await {
+        Ok(Some(update)) => match update.download_and_install(|_, _| {}, || {}).await {
+            Ok(_) => json!({ "ok": true }),
+            Err(e) => json!({ "ok": false, "error": e.to_string() }),
+        },
+        Ok(None) => json!({ "ok": false, "error": "已是最新版本" }),
+        Err(e) => json!({ "ok": false, "error": e.to_string() }),
+    }
+}
