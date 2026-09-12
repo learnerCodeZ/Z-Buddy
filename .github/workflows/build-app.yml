@@ -10,9 +10,14 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-    paths:
-      - 'app/**'
-      - '.github/workflows/build-app.yml'
+    # 用 paths-ignore 而不是 paths：GitHub 里 tags 与 paths 是 **AND** 关系，
+    # 打 tag 时若提交没命中 paths 就整个不触发 → 发版会静默失败。
+    # 反过来只忽略纯文档/官网改动，既能省 CI 又保证 tag 必定触发。
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'website/**'
+      - 'lab/**'
   workflow_dispatch:
 
 permissions:
