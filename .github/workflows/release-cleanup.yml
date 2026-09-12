@@ -25,6 +25,9 @@ jobs:
       - name: 清理与 tag 版本不符的安装包
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 必须显式给仓库：本 job 没有 actions/checkout，gh 否则不知道操作哪个仓库，
+          # 结果是"步骤成功但一个资产都没删"（踩过）。
+          GH_REPO: ${{ github.repository }}
         run: |
           set -u
           changed=0
