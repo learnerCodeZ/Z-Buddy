@@ -98,9 +98,16 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           $ver = '${{ github.ref_name }}'.TrimStart('v')
-          gh release view '${{ github.ref_name }}' --json assets --jq '.assets[].name' 2>$null | ForEach-Object {
+          # Release 可能尚未创建（全新 tag）或为空：不要让清理步骤失败而阻断发布
+          $assets = gh release view '${{ github.ref_name }}' --json assets --jq '.assets[].name' 2>$null
+          if ($LASTEXITCODE -ne 0 -or -not $assets) {
+            Write-Host "Release 尚不存在或无资产，跳过清理"
+            exit 0
+          }
+          $assets | ForEach-Object {
             if ($_ -match '^Z-Buddy_.+_x64-setup\.exe$' -and $_ -notmatch [regex]::Escape($ver)) {
               Write-Host "删除旧资产: $_"
               gh release delete-asset '${{ github.ref_name }}' $_ --yes
