@@ -43,6 +43,16 @@ pub fn read_app_key_bool(key: &str) -> Option<bool> {
     read_app_json().get(key).and_then(|v| v.as_bool())
 }
 
+/// 读 app.json 的单个键（任意 JSON 值，供 petWindow 等对象键使用）
+pub fn read_app_key_value(key: &str) -> Option<Value> {
+    read_app_json().get(key).cloned()
+}
+
+/// 读 app.json 的单个键（浮点，供 petScale 使用）
+pub fn read_app_key_f64(key: &str) -> Option<f64> {
+    read_app_key_value(key).and_then(|v| v.as_f64())
+}
+
 /// 可选宠物列表：内置宠物在前（首个 = 默认宠物），外部包（含 pet.json 的目录）在后
 pub fn pet_list() -> Vec<String> {
     let mut list = vec![

@@ -88,10 +88,11 @@ cd app && npx tauri build
 
 | 文件 | 内容 | 由谁写 |
 |---|---|---|
-| `state.json` | Agent 当前状态快照 | 插件 `report.mjs` |
-| `events.jsonl` | 事件流（追加写） | 插件 `report.mjs` |
+| `state.json` | 兼容快照（最近活跃会话的状态；应用/托盘旧逻辑读这个） | 插件 `report.mjs` |
+| `sessions/<会话id>.json` | 每会话独立状态分片（多会话聚合的数据源，并发写零竞态） | 插件 `report.mjs` |
+| `events.jsonl` | 事件流（追加写，含 `ts_local` 本地时间与 `project` 项目名；应用读超 5000 行时轮转） | 插件 `report.mjs` |
 | `pause` | 暂停标志文件（存在=暂停） | 桌宠应用 `set_pause` |
-| `app.json` | 应用偏好（当前宠物/关闭行为/mainSeen） | 桌宠应用 |
+| `app.json` | 应用偏好（当前宠物/关闭行为/mainSeen/petScale/petWindow） | 桌宠应用 |
 | `pets/<名>/` | 外部宠物包（atlas.png + pet.json） | 用户 |
 | `bin/z-buddy-app.exe` | 发布版副本（自启用） | `sync-release.sh` |
 
@@ -218,6 +219,8 @@ node app/tools/gen_yoru_atlas.mjs app/src/pets/yoru
 > 帧尺寸随包而定（像素宠物 64×64，插画宠物 192×192）；桌宠窗画布位图固定 192×192（窗口 240×340，
 > 宠物贴底、信息卡在其上方），与 192 帧 1:1、对 64 帧整数 3 倍放大。改画布尺寸时记得同步
 > `pet/styles.css` 的 `#pet`/`#card`、`tauri.conf.json` 的窗口高度与 `clickthrough.rs` 的点击穿透矩形。
+> **宠物缩放（设置页 petScale）改的是同一组量的整体倍率**：窗口尺寸（Rust `set_pet_scale`/setup 恢复）
+> × `#wrap` transform（前端）× `clickthrough.rs` 的 `PET_SCALE` 原子量，三处必须联动。
 
 ### 新增 Tauri 命令
 
@@ -234,7 +237,7 @@ node app/tools/gen_yoru_atlas.mjs app/src/pets/yoru
 ## 已知问题
 
 1. **幽灵暂停**：应用重启后 pause 文件偶尔被"幽灵点击"置位（已在 `set_pause` 加日志埋点）
-2. **多会话并发**：多 ZCode 会话同写 state.json（last-write-wins），Phase 2 引入会话聚合
+2. **多会话并发**：~~多 ZCode 会话同写 state.json（last-write-wins）~~ **已在 phase-3 解决**——插件改为每会话独立写 `sessions/<id>.json` 分片（并发零竞态），state.json 保留为最近活跃会话的兼容快照，宠物端按 error > permission > working > thinking > idle 优先级显示（实施文档：`local/notes/phase/phase-3-多会话聚合.md`）
 3. **安装包未签名**：SmartScreen 会弹警告，需代码签名证书（正式分发后处理）
 4. **Dev 守护进程脆弱**：tauri dev 会随应用崩溃退出，重建需 `taskkill` 清 node 链后再起
 

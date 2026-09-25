@@ -96,6 +96,30 @@ export function withPoseAlternate(status, sinceMs, nowMs, states, periodMs = POS
   return Math.floor((nowMs - sinceMs) / periodMs) % 2 === 1 ? alt : status;
 }
 
+/** 多会话聚合：宠物端显示优先级（error 最要紧），同级取最近活跃 */
+export const SESSION_PRIORITY = ["error", "permission", "working", "thinking", "idle", "sleep"];
+
+/**
+ * 从会话分片列表里挑"最要紧"的会话（宠物窗大状态显示用）：
+ *   error > permission > working > thinking > idle/sleep，同级取 updated_ms 最近；
+ * active === false（应用端标记 10 分钟无更新）的分片不参与。
+ * 返回 null 表示没有可用会话（调用方退回 state.json 兼容快照）。
+ */
+export function pickDominantSession(sessions) {
+  const list = (sessions || []).filter((s) => s && s.active !== false && s.status);
+  if (!list.length) return null;
+  const rank = (st) => {
+    const i = SESSION_PRIORITY.indexOf(st);
+    return i === -1 ? SESSION_PRIORITY.length : i;
+  };
+  return list.reduce((best, s) => {
+    const r1 = rank(s.status);
+    const r2 = rank(best.status);
+    if (r1 !== r2) return r1 < r2 ? s : best;
+    return (s.updated_ms || 0) > (best.updated_ms || 0) ? s : best;
+  });
+}
+
 /** 形象名去掉 `_alt` 后缀（界面文案用：idle_alt 也要显示成"待机"） */
 export function baseStatusName(status) {
   return String(status || "").replace(/_alt$/, "");

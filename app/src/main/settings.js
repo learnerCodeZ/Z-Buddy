@@ -19,6 +19,15 @@ export function bootSettings() {
     .catch(() => (closeEl.value = "hide"));
   closeEl.onchange = () => invoke("set_close_behavior", { v: closeEl.value });
 
+  const scaleEl = document.querySelector("#set-scale");
+  invoke("get_pet_scale")
+    .then((s) => (scaleEl.value = String(s)))
+    .catch(() => (scaleEl.value = "1"));
+  scaleEl.onchange = async () => {
+    const applied = await invoke("set_pet_scale", { scale: parseFloat(scaleEl.value) });
+    scaleEl.value = String(applied); // 后端吸附后的值回填
+  };
+
   document.querySelector("#lnk-repo").onclick = (e) => {
     e.preventDefault();
     invoke("open_external", { url: "https://github.com/learnerCodeZ/Z-Buddy" });

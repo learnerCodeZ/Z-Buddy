@@ -34,8 +34,11 @@
           <div id="dash-status" class="big">—</div>
           <div id="dash-detail">—</div>
           <div id="dash-session">—</div>
+          <div id="dash-project">—</div>
           <button id="dash-pause">⏸ 暂停 Agent</button>
           <div id="dash-stats">—</div>
+          <div id="dash-sessions"></div>
+          <div id="dash-daily"></div>
         </div>
         <div id="dash-timeline">
           <h3>最近事件</h3>
@@ -72,6 +75,16 @@
           <select id="set-close">
             <option value="hide">隐藏到托盘（推荐）</option>
             <option value="exit">退出应用</option>
+          </select>
+        </label>
+        <label class="row">
+          <span>宠物大小</span>
+          <select id="set-scale">
+            <option value="0.5">50%</option>
+            <option value="0.75">75%</option>
+            <option value="1">100%（默认）</option>
+            <option value="1.5">150%</option>
+            <option value="2">200%</option>
           </select>
         </label>
         <div class="row about">

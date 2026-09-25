@@ -8,16 +8,19 @@ pub mod commands;
 pub mod config;
 pub mod tray;
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 
 use serde_json::json;
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 
 use commands::{open_external, toggle_pause};
 use config::{read_app_key_bool, write_app_key};
 
 /// 拖动进行中标记：拖动期间点击穿透守护绝不动手
 pub static DRAGGING: AtomicBool = AtomicBool::new(false);
+
+/// 桌宠缩放百分比（100 = 1.0 原始 240×340），clickthrough 穿透矩形与缩放命令共享
+pub static PET_SCALE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(100);
 
 pub const WEBSITE_URL: &str = "https://learnercodez.github.io/Z-Buddy/";
 
@@ -79,6 +82,9 @@ pub fn run() {
             commands::get_pet_pref_cmd,
             commands::set_pet_pref_cmd,
             commands::read_events,
+            commands::read_sessions,
+            commands::event_facets,
+            commands::daily_stats,
             commands::hide_main,
             commands::get_close_behavior,
             commands::set_close_behavior,
@@ -88,6 +94,9 @@ pub fn run() {
             commands::popup_pet_menu,
             commands::open_local_dir,
             commands::get_pets_dir,
+            commands::get_pet_scale,
+            commands::set_pet_scale,
+            commands::save_pet_position,
             commands::check_update,
             commands::install_update
         ])
@@ -118,16 +127,56 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            // ---- 宠物窗出生在主屏右下角（按实际物理尺寸，适配 DPI 缩放）----
+            // ---- 宠物窗出生位置：先按记忆（任意显示器），否则主屏右下角（适配 DPI）----
             if let Some(win) = app.get_webview_window("pet") {
-                if let Ok(Some(mon)) = win.current_monitor() {
-                    let mpos = mon.position();
-                    let msize = mon.size();
-                    let wsize = win.outer_size().unwrap_or(tauri::PhysicalSize::new(360, 450));
-                    let _ = win.set_position(tauri::PhysicalPosition::new(
-                        mpos.x + msize.width as i32 - wsize.width as i32 - 10,
-                        mpos.y + msize.height as i32 - wsize.height as i32 - 60,
-                    ));
+                // 缩放恢复：按保存的 petScale 调整窗口尺寸（CSS 侧由前端同步缩放）
+                let pet_scale =
+                    config::read_app_key_f64("petScale").unwrap_or(1.0).clamp(0.5, 2.0);
+                PET_SCALE.store(
+                    (pet_scale * 100.0).round() as u32,
+                    std::sync::atomic::Ordering::SeqCst,
+                );
+                let _ = win.set_size(tauri::LogicalSize::new(240.0 * pet_scale, 340.0 * pet_scale));
+
+                let mut placed = false;
+                // 位置记忆：上次保存的物理坐标，且必须落在某个显示器内（拔掉副屏时回退）
+                if let Some(pw) = config::read_app_key_value("petWindow") {
+                    if let (Some(x), Some(y)) = (
+                        pw.get("x").and_then(|v| v.as_i64()),
+                        pw.get("y").and_then(|v| v.as_i64()),
+                    ) {
+                        if let Ok(monitors) = app.available_monitors() {
+                            let inside = monitors.iter().any(|m| {
+                                let mp = m.position();
+                                let ms = m.size();
+                                x >= mp.x as i64
+                                    && y >= mp.y as i64
+                                    && x < (mp.x + ms.width as i32) as i64
+                                    && y < (mp.y + ms.height as i32) as i64
+                            });
+                            if inside {
+                                let _ = win.set_position(tauri::PhysicalPosition::new(
+                                    x as i32, y as i32,
+                                ));
+                                placed = true;
+                            }
+                        }
+                    }
+                }
+                if !placed {
+                    if let Ok(Some(mon)) = win.current_monitor() {
+                        let mpos = mon.position();
+                        let msize = mon.size();
+                        let dpi = win.scale_factor().unwrap_or(1.0);
+                        let wsize = tauri::PhysicalSize::new(
+                            (240.0 * pet_scale * dpi).round() as u32,
+                            (340.0 * pet_scale * dpi).round() as u32,
+                        );
+                        let _ = win.set_position(tauri::PhysicalPosition::new(
+                            mpos.x + msize.width as i32 - wsize.width as i32 - 10,
+                            mpos.y + msize.height as i32 - wsize.height as i32 - 60,
+                        ));
+                    }
                 }
             }
             clickthrough::spawn(app.handle().clone());

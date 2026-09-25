@@ -3,7 +3,7 @@
 use tauri::Manager;
 use tauri::menu::{Menu, MenuItem};
 
-use crate::commands::{cycle_pet, open_external, toggle_pause};
+use crate::commands::{cycle_pet, open_external};
 use crate::open_main;
 use crate::WEBSITE_URL;
 

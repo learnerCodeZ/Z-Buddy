@@ -5,7 +5,8 @@ use std::sync::atomic::Ordering;
 
 use tauri::Manager;
 
-use crate::DRAGGING;
+use crate::config::read_app_key_f64;
+use crate::{DRAGGING, PET_SCALE};
 
 #[cfg(windows)]
 fn left_button_held() -> bool {
@@ -19,6 +20,13 @@ fn left_button_held() -> bool {
 }
 
 pub fn spawn(app: tauri::AppHandle) {
+    // 启动即载入已保存的缩放，重启后穿透矩形仍按缩放计算
+    if let Some(s) = read_app_key_f64("petScale") {
+        PET_SCALE.store(
+            (s.clamp(0.5, 2.0) * 100.0).round() as u32,
+            Ordering::SeqCst,
+        );
+    }
     std::thread::spawn(move || loop {
         std::thread::sleep(std::time::Duration::from_millis(200));
         let Some(win) = app.get_webview_window("pet") else { continue };
@@ -31,9 +39,11 @@ pub fn spawn(app: tauri::AppHandle) {
         let scale = win.scale_factor().unwrap_or(1.0);
         let lx = (cur.x - wpos.x as f64) / scale;
         let ly = (cur.y - wpos.y as f64) / scale;
-        // 交互区 = 宠物本体矩形（CSS 空间 24..216 x, 142..334 y，窗口 240×340；
-        // 与 pet/styles.css 的 #pet 位置尺寸保持一致）
-        let interactive = lx >= 24.0 && lx <= 216.0 && ly >= 142.0 && ly <= 334.0;
+        // 交互区 = 宠物本体矩形（CSS 空间 24..216 x, 142..334 y，原始窗口 240×340）
+        // × 宠物缩放（PET_SCALE/100，与 pet/styles.css 的 #pet 位置尺寸保持一致）；
+        // lx/ly 已是逻辑像素，PET_SCALE 是逻辑缩放，直接相乘
+        let s = PET_SCALE.load(Ordering::SeqCst) as f64 / 100.0;
+        let interactive = lx >= 24.0 * s && lx <= 216.0 * s && ly >= 142.0 * s && ly <= 334.0 * s;
         let _ = win.set_ignore_cursor_events(!interactive);
     });
 }

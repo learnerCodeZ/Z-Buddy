@@ -6,7 +6,7 @@ use serde_json::json;
 use tauri::menu::ContextMenu;
 use tauri::{Emitter, Manager};
 
-use crate::config::{pet_list, read_app_json, read_app_key_bool, read_app_key_str, write_app_key, z_buddy_dir};
+use crate::config::{pet_list, read_app_key_f64, read_app_key_str, write_app_key, z_buddy_dir};
 
 // ---- 状态与暂停 ----
 
@@ -23,8 +23,13 @@ pub fn read_state() -> String {
 }
 
 #[tauri::command]
-pub fn set_pause(on: bool) -> bool {
-    println!("[z-buddy] set_pause({}) invoked", on);
+pub fn set_pause(on: bool, source: Option<String>) -> bool {
+    // source 标记调用来源（pet-click / pet-menu / dashboard），排查"幽灵暂停"用
+    println!(
+        "[z-buddy] set_pause({}) from {}",
+        on,
+        source.as_deref().unwrap_or("unknown")
+    );
     let p = z_buddy_dir().join("pause");
     if on {
         let _ = fs::create_dir_all(z_buddy_dir());
@@ -50,6 +55,51 @@ pub fn cursor_pos(app: tauri::AppHandle) -> serde_json::Value {
         Ok(p) => json!({ "x": p.x, "y": p.y }),
         Err(_) => json!(null),
     }
+}
+
+// ---- 桌宠缩放与位置记忆 ----
+
+/// 桌宠缩放（1.0 = 原始 240×340 窗口，CSS 侧用 transform 等比缩放）
+#[tauri::command]
+pub fn get_pet_scale() -> f64 {
+    read_app_key_f64("petScale").unwrap_or(1.0).clamp(0.5, 2.0)
+}
+
+/// 设置缩放并联动窗口尺寸；底边锚定（宠物"脚下"位置不动），返回吸附后的值
+#[tauri::command]
+pub fn set_pet_scale(app: tauri::AppHandle, scale: f64) -> f64 {
+    let s = scale.clamp(0.5, 2.0);
+    let prev = crate::PET_SCALE.load(std::sync::atomic::Ordering::SeqCst) as f64 / 100.0;
+    write_app_key("petScale", json!(s));
+    crate::PET_SCALE.store(
+        (s * 100.0).round() as u32,
+        std::sync::atomic::Ordering::SeqCst,
+    );
+    if let Some(win) = app.get_webview_window("pet") {
+        if let Ok(dpi) = win.scale_factor() {
+            let dy = (340.0 * (s - prev) * dpi).round() as i32;
+            if dy != 0 {
+                if let Ok(p) = win.outer_position() {
+                    let _ = win.set_position(tauri::PhysicalPosition::new(p.x, p.y - dy));
+                }
+            }
+        }
+        let _ = win.set_size(tauri::LogicalSize::new(240.0 * s, 340.0 * s));
+        let _ = app.emit("pet-scale-changed", s);
+    }
+    s
+}
+
+/// 保存宠物窗当前位置（物理像素），下次启动恢复（配合拖动结束的 mouseup 调用）
+#[tauri::command]
+pub fn save_pet_position(app: tauri::AppHandle) -> bool {
+    if let Some(win) = app.get_webview_window("pet") {
+        if let Ok(p) = win.outer_position() {
+            write_app_key("petWindow", json!({ "x": p.x, "y": p.y }));
+            return true;
+        }
+    }
+    false
 }
 
 // ---- 宠物包 ----
@@ -119,18 +169,183 @@ pub fn set_pet_pref_cmd(app: tauri::AppHandle, name: String) -> bool {
 
 // ---- 事件流 ----
 
-/// 读 events.jsonl 尾部 limit 条 + 总条数
+/// 事件流轮转阈值：超过该行数时，读操作顺带截断（应用是唯一单实例读者，
+/// 放这里避免多会话插件进程并发写时截断竞态）
+const EVENT_ROTATE_LINES: usize = 5000;
+/// 轮转后保留的尾部行数
+const EVENT_KEEP_LINES: usize = 2000;
+
+/// 读 events.jsonl 尾部 limit 条（可按项目 / 会话筛选）+ 总条数
 #[tauri::command]
-pub fn read_events(limit: usize) -> serde_json::Value {
-    let text = fs::read_to_string(z_buddy_dir().join("events.jsonl")).unwrap_or_default();
-    let total = text.lines().count();
+pub fn read_events(
+    limit: usize,
+    project: Option<String>,
+    session: Option<String>,
+) -> serde_json::Value {
+    let path = z_buddy_dir().join("events.jsonl");
+    let text = fs::read_to_string(&path).unwrap_or_default();
+    let mut total = text.lines().count();
+    // 轮转：保留尾部 EVENT_KEEP_LINES 行，临时文件 + rename 原子替换
+    if total > EVENT_ROTATE_LINES {
+        let mut kept: Vec<&str> = text.lines().rev().take(EVENT_KEEP_LINES).collect();
+        kept.reverse();
+        let tmp = path.with_extension("jsonl.tmp");
+        let body = format!("{}\n", kept.join("\n"));
+        if fs::write(&tmp, body).is_ok() && fs::rename(&tmp, &path).is_ok() {
+            total = EVENT_KEEP_LINES;
+        }
+        let _ = fs::remove_file(&tmp);
+    }
+    let matches = |v: &serde_json::Value, key: &str, want: &Option<String>| match want {
+        Some(w) => v.get(key).and_then(|x| x.as_str()) == Some(w.as_str()),
+        None => true,
+    };
     let items: Vec<serde_json::Value> = text
         .lines()
         .rev()
-        .take(limit)
         .filter_map(|l| serde_json::from_str(l).ok())
+        .filter(|v: &serde_json::Value| {
+            matches(v, "project", &project) && matches(v, "session_id", &session)
+        })
+        .take(limit)
         .collect();
     json!({ "total": total, "items": items })
+}
+
+// ---- 多会话聚合（phase-3）----
+
+/// 会话失活阈值：hook 没有"会话结束"事件（枚举已从 ZCode 开源源码确认），只能超时判活
+const SESSION_STALE_MS: u64 = 10 * 60 * 1000;
+/// 会话分片数量上限，超出时清理最旧的
+const SESSION_SHARD_MAX: usize = 50;
+
+/// 读全部会话分片（按最近活跃倒序）。active = updated_ms 距今 10 分钟内；
+/// 分片由插件每会话独立写入，应用端只读，无并发问题
+#[tauri::command]
+pub fn read_sessions() -> Vec<serde_json::Value> {
+    let dir = z_buddy_dir().join("sessions");
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    let mut items: Vec<(u64, serde_json::Value)> = Vec::new();
+    if let Ok(entries) = fs::read_dir(&dir) {
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.extension().and_then(|x| x.to_str()) != Some("json") {
+                continue;
+            }
+            if let Ok(text) = fs::read_to_string(&p) {
+                if let Ok(mut v) = serde_json::from_str::<serde_json::Value>(&text) {
+                    let ums = v.get("updated_ms").and_then(|x| x.as_u64()).unwrap_or(0);
+                    v["active"] = json!(ums > 0 && now_ms.saturating_sub(ums) < SESSION_STALE_MS);
+                    items.push((ums, v));
+                }
+            }
+        }
+    }
+    items.sort_by(|a, b| b.0.cmp(&a.0));
+    if items.len() > SESSION_SHARD_MAX {
+        for (_, v) in items.iter().skip(SESSION_SHARD_MAX) {
+            if let Some(sid) = v.get("session_id").and_then(|x| x.as_str()) {
+                let safe: String = sid
+                    .chars()
+                    .map(|c| if c.is_ascii_alphanumeric() || c == '_' || c == '-' { c } else { '_' })
+                    .collect();
+                let _ = fs::remove_file(dir.join(format!("{safe}.json")));
+            }
+        }
+    }
+    items
+        .into_iter()
+        .take(SESSION_SHARD_MAX)
+        .map(|(_, v)| v)
+        .collect()
+}
+
+/// 活动页筛选候选：全量事件中去重的 project / session_id
+#[tauri::command]
+pub fn event_facets() -> serde_json::Value {
+    let text = fs::read_to_string(z_buddy_dir().join("events.jsonl")).unwrap_or_default();
+    let mut projects = std::collections::BTreeSet::new();
+    let mut sessions = std::collections::BTreeSet::new();
+    for line in text.lines() {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+            if let Some(p) = v.get("project").and_then(|x| x.as_str()) {
+                if !p.is_empty() {
+                    projects.insert(p.to_string());
+                }
+            }
+            if let Some(s) = v.get("session_id").and_then(|x| x.as_str()) {
+                if !s.is_empty() {
+                    sessions.insert(s.to_string());
+                }
+            }
+        }
+    }
+    json!({
+        "projects": projects.into_iter().collect::<Vec<_>>(),
+        "sessions": sessions.into_iter().collect::<Vec<_>>(),
+    })
+}
+
+/// 今日统计：按 events.jsonl 的 ts_local（本地时间）切日，day 形如 "2026-09-25"
+/// （由前端传入本地日期，避免 Rust 侧处理时区）；活跃时长取当日首尾事件跨度
+#[tauri::command]
+pub fn daily_stats(day: String) -> serde_json::Value {
+    let text = fs::read_to_string(z_buddy_dir().join("events.jsonl")).unwrap_or_default();
+    let prefix = format!("{day}T");
+    let mut events = 0usize;
+    let mut tool_calls = 0usize;
+    let mut first: Option<i64> = None;
+    let mut last: Option<i64> = None;
+    let mut tools: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for line in text.lines() {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        let Some(ts) = v.get("ts_local").and_then(|x| x.as_str()) else {
+            continue;
+        };
+        if !ts.starts_with(&prefix) {
+            continue;
+        }
+        events += 1;
+        if let Some(tool) = v.get("tool").and_then(|x| x.as_str()).filter(|s| !s.is_empty()) {
+            tool_calls += 1;
+            *tools.entry(tool.to_string()).or_insert(0) += 1;
+        }
+        let secs = ts.get(11..19).and_then(hms_to_secs).unwrap_or(0);
+        first = Some(match first {
+            Some(f) => f.min(secs),
+            None => secs,
+        });
+        last = Some(match last {
+            Some(l) => l.max(secs),
+            None => secs,
+        });
+    }
+    let mut top: Vec<(String, usize)> = tools.into_iter().collect();
+    top.sort_by(|a, b| b.1.cmp(&a.1));
+    top.truncate(3);
+    json!({
+        "events": events,
+        "toolCalls": tool_calls,
+        "activeMinutes": first.zip(last).map(|(f, l)| (l - f).max(0) / 60).unwrap_or(0),
+        "topTools": top
+            .into_iter()
+            .map(|(name, count)| json!({ "name": name, "count": count }))
+            .collect::<Vec<_>>(),
+    })
+}
+
+/// "HH:MM:SS" → 当日秒数
+fn hms_to_secs(s: &str) -> Option<i64> {
+    let mut it = s.split(':');
+    let h: i64 = it.next()?.parse().ok()?;
+    let m: i64 = it.next()?.parse().ok()?;
+    let sec: i64 = it.next()?.parse().ok()?;
+    Some(h * 3600 + m * 60 + sec)
 }
 
 // ---- 主窗口 ----

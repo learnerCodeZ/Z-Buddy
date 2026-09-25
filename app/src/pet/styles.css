@@ -10,6 +10,7 @@ body {
   position: relative;
   width: 240px;
   height: 340px;
+  transform-origin: 0 0; /* 宠物缩放：Rust 侧调窗口尺寸，这里整体等比缩放 */
 }
 
 /* ---- 宠物本体（精灵图画布）---- */
@@ -55,6 +56,40 @@ body {
   line-height: 30px;
   text-align: center;
   box-shadow: 0 2px 8px #0006;
+}
+
+/* ---- 动态气泡（phase-4）：DOM 渲染自由文本，队列语义沿用图集烘焙气泡的规则 ---- */
+#bubble-layer {
+  position: absolute;
+  left: 12px;
+  top: 30px;
+  width: 216px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 5;
+}
+.bubble {
+  max-width: 100%;
+  padding: 5px 10px;
+  background: #fff;
+  color: #1e2229;
+  border: 2px solid #1e2229;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 2px 2px 0 #0006;
+  word-break: break-all;
+}
+/* 预警常驻气泡：Agent 正在操控屏幕时显示（区别于队列气泡，不自动消失） */
+.bubble.warn {
+  background: #ff6b6b;
+  color: #fff;
+  border-color: #7c1414;
+  box-shadow: 2px 2px 0 #0008;
 }
 
 /* ---- 状态修饰 ---- */

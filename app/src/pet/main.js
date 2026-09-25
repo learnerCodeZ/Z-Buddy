@@ -5,6 +5,7 @@ import {
   SpriteAnimator,
   pickDragState,
   resolvePetStatus,
+  pickDominantSession,
   baseStatusName,
 } from "../shared/pack.js";
 
@@ -31,6 +32,50 @@ atlas.src = pack.atlasUrl;
 let animator = new SpriteAnimator(canvas, atlas, pack.manifest);
 animator.start();
 
+// ---- 缩放：#wrap 整体 transform 等比缩放（窗口尺寸由 Rust 侧联动调整）----
+const wrap = document.querySelector("#wrap");
+function applyScale(s) {
+  wrap.style.transform = `scale(${s})`;
+}
+applyScale(await invoke("get_pet_scale"));
+listen("pet-scale-changed", (e) => applyScale(e.payload));
+
+// ---- 动态气泡（phase-4）：队列气泡（自动消失、最多 2 个、最早的先消失）+ 预警常驻气泡 ----
+const bubbleLayer = document.querySelector("#bubble-layer");
+const BUBBLE_MAX = 2;
+const BUBBLE_MS = 2600;
+const bubbleQueue = []; // { el }
+
+function showBubble(text) {
+  if (!text) return;
+  const el = document.createElement("div");
+  el.className = "bubble";
+  el.textContent = text;
+  bubbleLayer.appendChild(el);
+  const item = { el };
+  bubbleQueue.push(item);
+  while (bubbleQueue.length > BUBBLE_MAX) bubbleQueue.shift().el.remove();
+  setTimeout(() => {
+    const i = bubbleQueue.indexOf(item);
+    if (i >= 0) bubbleQueue.splice(i, 1);
+    el.remove();
+  }, BUBBLE_MS);
+}
+
+// 预警常驻气泡：Agent 正在操控屏幕时显示（不自动消失，事件流离开桌面操作即撤下）
+let warnEl = null;
+function setControlWarning(on) {
+  if (on && !warnEl) {
+    warnEl = document.createElement("div");
+    warnEl.className = "bubble warn";
+    warnEl.textContent = "⚠ 正在操控你的电脑 · 点我暂停";
+    bubbleLayer.appendChild(warnEl);
+  } else if (!on && warnEl) {
+    warnEl.remove();
+    warnEl = null;
+  }
+}
+
 // 监听宠物切换事件（主界面/托盘/右键切换后热加载）
 console.log("[z-buddy-pet] 注册 pet-changed 监听器，listen =", typeof listen);
 listen("pet-changed", async (e) => {
@@ -51,19 +96,26 @@ listen("pet-changed", async (e) => {
 // ---- 状态轮询 ----
 let paused = false;
 let idleSinceLocal = null; // state.json 没有 since 时的本地兜底计时
+let lastProject = null; // 项目切换气泡用（null = 启动后还没见过项目）
+const bootAt = Date.now(); // 启动宽限期基准：防"重启瞬间误落在宠物上的点击"造成幽灵暂停
 
 async function tick() {
   try {
     const s = JSON.parse(await invoke("read_state"));
     paused = !!s.paused;
-    const raw = s.status || "sleep";
+    // 多会话聚合：显示"最要紧"的会话；无分片（旧插件/还没事件）时退回 state.json 兼容快照
+    let dom = null;
+    try {
+      dom = pickDominantSession(await invoke("read_sessions"));
+    } catch {}
+    const raw = (dom || s).status || "sleep";
     // 待机超时（默认 5 分钟）→ 睡觉。优先用插件给的 since（跨重启也准），没有就本地计时
     if (raw === "idle") {
       if (idleSinceLocal === null) idleSinceLocal = Date.now();
     } else {
       idleSinceLocal = null;
     }
-    const sinceMs = Date.parse(s.since || "") || idleSinceLocal;
+    const sinceMs = Date.parse((dom || s).since || "") || idleSinceLocal;
     // 暂停 > 待机超时睡觉 > 待机/思考两张形象轮换（逻辑在 shared/pack.js，与主界面共用一份）
     const status = resolvePetStatus(raw, sinceMs, Date.now(), pack?.manifest?.states, paused);
     // 长按拖动期间动画由拖动形象接管，别让轮询把状态覆盖回去
@@ -71,10 +123,19 @@ async function tick() {
       pet.className = paused ? "paused-ui" : status;
       animator.setStatus(status);
     }
+    const detail = dom?.detail || s.detail || "";
     statusEl.textContent = paused
       ? "已暂停 ⏸（点我恢复）"
-      : (STATUS_LABEL[baseStatusName(status)] || status) + (s.detail ? ` · ${s.detail}` : "");
-    detailEl.textContent = `最近事件：${s.last_event || "-"}`;
+      : (STATUS_LABEL[baseStatusName(status)] || status) + (detail ? ` · ${detail}` : "");
+    detailEl.textContent = `最近事件：${(dom || s).last_event || "-"}`;
+    // 人机协调预警：任一活跃会话最近在操控屏幕 → 常驻预警气泡；暂停时撤下
+    setControlWarning(!paused && !!(dom?.desktop_control || s.desktop_control));
+    // 项目切换时冒一个队列气泡（首次启动不冒，避免噪音）
+    const curProject = ((dom || s).cwd || "").split(/[\\/]/).filter(Boolean).pop() || null;
+    if (curProject && curProject !== lastProject) {
+      if (lastProject !== null) showBubble(`📁 ${curProject}`);
+      lastProject = curProject;
+    }
   } catch (err) {
     statusEl.textContent = "读取失败";
     detailEl.textContent = String(err);
@@ -182,7 +243,10 @@ window.addEventListener("mousemove", (e) => {
 
 window.addEventListener("mouseup", () => {
   clearTimeout(pressTimer);
-  if (downPos) invoke("set_dragging", { on: false });
+  if (downPos) {
+    invoke("set_dragging", { on: false });
+    invoke("save_pet_position"); // 拖动结束即存位置，下次启动还原
+  }
   downPos = null;
   exitDragPose();
 });
@@ -194,8 +258,11 @@ pet.addEventListener("click", async () => {
     longPressed = false;
     return;
   }
+  // 启动宽限期（1.2 秒）：宠物窗出生在右下角、紧邻托盘，应用重启瞬间的误落点击
+  // 不再被当成"点按暂停"（幽灵暂停的缓解措施之一）
+  if (Date.now() - bootAt < 1200) return;
   paused = !paused;
-  await invoke("set_pause", { on: paused });
+  await invoke("set_pause", { on: paused, source: "pet-click" });
   tick();
 });
 

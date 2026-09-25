@@ -105,6 +105,38 @@ code { background: #ffffff14; padding: 1px 5px; border-radius: 4px; }
 #dash-pause:hover { filter: brightness(1.1); }
 #dash-pause.on { background: #57606f; color: #f1f2f6; }
 #dash-stats { color: var(--text-dim); }
+#dash-project { color: var(--text-dim); margin: 4px 0; }
+
+/* ---- 多会话卡片 + 今日统计（phase-3）---- */
+#dash-sessions {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 460px;
+}
+.session-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 12px;
+}
+.session-card span { color: var(--text-dim); word-break: break-all; }
+.session-card.stale { opacity: 0.45; }
+.session-hint { color: var(--text-dim); font-size: 12px; }
+#dash-daily {
+  margin-top: 10px;
+  max-width: 460px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 12px;
+  color: var(--text-dim);
+}
 #dash-timeline {
   width: 100%;
   background: var(--panel); border-radius: 12px; padding: 12px 16px;
@@ -144,6 +176,12 @@ code { background: #ffffff14; padding: 1px 5px; border-radius: 4px; }
 
 /* ---- 活动时间线 ---- */
 #act-filters { margin-bottom: 10px; }
+.act-filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+#act-filters select {
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid #4a5160; border-radius: 6px;
+  padding: 4px 8px; font-size: 12px; cursor: pointer;
+}
 #act-filters button {
   margin-right: 6px; padding: 4px 10px;
   border: 0; border-radius: 8px;
