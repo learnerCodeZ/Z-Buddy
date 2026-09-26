@@ -21,10 +21,11 @@ const liveLinks = [
   { href: `${bp}/docs/disclaimer/`, label: '声明' },
 ];
 const deepLinks = [
-  { href: `${bp}/docs/zcode-opensource/`, label: 'ZCode 开源的影响' },
   { href: `${bp}/docs/pet-pack-spec/`, label: '宠物包规范 v1' },
+  { href: `${bp}/docs/architecture-privacy/`, label: '架构与隐私' },
+  { href: `${bp}/docs/zcode-opensource/`, label: 'ZCode 开源的影响' },
 ];
-const soonItems = ['安装指南', '使用指南', '架构与隐私'];
+const soonItems: string[] = [];
 
 function active(href: string) {
   return pathname === href || (pathname + '/') === href;
