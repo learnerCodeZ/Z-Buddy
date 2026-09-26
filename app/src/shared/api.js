@@ -4,3 +4,4 @@ export const invoke = window.__TAURI__.core.invoke;
 export const convertFileSrc = window.__TAURI__.core.convertFileSrc;
 export const listen = window.__TAURI__.event.listen;
 export const emit = window.__TAURI__.event.emit;
+export const dialog = window.__TAURI__.dialog; // 原生文件夹/文件选择（tauri-plugin-dialog）

@@ -157,6 +157,26 @@ code { background: #ffffff14; padding: 1px 5px; border-radius: 4px; }
 .pet-card.on { border-color: var(--accent); }
 .pet-card canvas { width: 96px; height: 96px; image-rendering: pixelated; }
 .pet-card .tag { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+/* ---- 宠物卡切换淡入 + 导入提示条（phase-6）---- */
+canvas.switching { animation: pet-fade-in 180ms ease-out; }
+@keyframes pet-fade-in {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
+}
+.pet-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  box-shadow: 0 4px 16px #0007;
+  z-index: 50;
+}
 .add-card {
   display: flex;
   flex-direction: column;

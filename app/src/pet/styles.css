@@ -36,6 +36,12 @@ body {
   transition: filter 0.3s, transform 0.12s;
   pointer-events: none;
 }
+/* 状态切换淡入（SpriteAnimator.setStatus 挂 switching class） */
+#pet-canvas.switching { animation: pet-fade-in 180ms ease-out; }
+@keyframes pet-fade-in {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
+}
 /* 按下就有反馈（不必等长按判定），避免"按了半天没动静" */
 #pet:active #pet-canvas {
   transform: scale(0.97);

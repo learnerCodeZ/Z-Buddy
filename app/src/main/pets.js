@@ -1,6 +1,6 @@
-// 宠物管理页：内置 + 外部包网格卡，点击即切换 + 加号添加自定义包
-import { invoke, listen } from "../shared/api.js";
-import { loadBundledManifest, loadExternalByDir } from "../shared/pack.js";
+// 宠物管理页：内置 + 外部包网格卡（hover 播放动画）+ 文件夹导入自定义包
+import { invoke, listen, dialog } from "../shared/api.js";
+import { loadBundledManifest, loadExternalByDir, SpriteAnimator } from "../shared/pack.js";
 
 const grid = document.querySelector("#pets-grid");
 let rendering = false; // 防重锁：render 中不响应第二次调用
@@ -8,6 +8,16 @@ let rendering = false; // 防重锁：render 中不响应第二次调用
 export function bootPets() {
   render();
   listen("pet-changed", () => setTimeout(render, 50)); // 延迟一帧，让状态文件落盘
+}
+
+/** 轻量提示条（导入成功/失败反馈），2.6 秒自动消失 */
+function toast(msg) {
+  document.querySelector(".pet-toast")?.remove();
+  const el = document.createElement("div");
+  el.className = "pet-toast";
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
 }
 
 async function render() {
@@ -42,7 +52,7 @@ async function render() {
       };
       grid.appendChild(card);
 
-      // 预览图（内置走 public/pets，外部走 asset protocol）
+      // 预览：静态第一帧，hover 时播放 idle 动画（用与宠物窗同一套 SpriteAnimator）
       try {
         const pack = p.source === "bundled"
           ? await loadBundledManifest(p.name)
@@ -50,10 +60,20 @@ async function render() {
         if (pack) {
           const atlas = new Image();
           atlas.onload = () => {
-            const ctx = canvas.getContext("2d");
-            ctx.imageSmoothingEnabled = false;
-            ctx.clearRect(0, 0, 96, 96);
-            ctx.drawImage(atlas, 0, 0, pack.manifest.frame.w, pack.manifest.frame.h, 0, 0, 96, 96);
+            const drawFirst = () => {
+              const ctx = canvas.getContext("2d");
+              ctx.imageSmoothingEnabled = false;
+              ctx.clearRect(0, 0, 96, 96);
+              ctx.drawImage(atlas, 0, 0, pack.manifest.frame.w, pack.manifest.frame.h, 0, 0, 96, 96);
+            };
+            drawFirst();
+            const animator = new SpriteAnimator(canvas, atlas, pack.manifest);
+            animator.setStatus("idle");
+            card.addEventListener("mouseenter", () => animator.start());
+            card.addEventListener("mouseleave", () => {
+              animator.stop();
+              drawFirst();
+            });
           };
           atlas.src = pack.atlasUrl;
         }
@@ -62,16 +82,24 @@ async function render() {
       }
     }
 
-    // 加号卡片（固定只加一次）
+    // 加号卡片：选文件夹 → 校验导入 → 刷新（替代旧的"打开目录手动放"）
     const addCard = document.createElement("div");
     addCard.className = "pet-card add-card";
-    addCard.innerHTML = '<div class="add-icon">＋</div><div>添加自定义宠物</div><div class="tag">放入 atlas.png + pet.json</div>';
+    addCard.innerHTML =
+      '<div class="add-icon">＋</div><div>导入自定义宠物</div><div class="tag">选择含 atlas.png + pet.json 的文件夹</div>';
     addCard.onclick = async () => {
       try {
-        const dir = await invoke("get_pets_dir");
-        await invoke("open_local_dir", { dir });
+        const picked = await dialog.open({
+          directory: true,
+          multiple: false,
+          title: "选择宠物包文件夹（含 atlas.png 与 pet.json）",
+        });
+        if (!picked) return; // 用户取消
+        const name = await invoke("import_pet_from_dir", { source: picked });
+        toast(`✓ 已导入「${name}」，点击卡片即可使用`);
+        await render();
       } catch (err) {
-        console.warn("打开宠物目录失败:", err);
+        toast("导入失败：" + String(err));
       }
     };
     grid.appendChild(addCard);

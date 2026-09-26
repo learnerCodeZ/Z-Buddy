@@ -145,13 +145,23 @@ export class SpriteAnimator {
     this.col = 0;
     this.lastAt = 0;
     this.status = "idle";
+    this.raf = null;
   }
 
   setStatus(status) {
-    if (this.manifest?.states?.[status]) this.status = status;
+    if (this.manifest?.states?.[status] && status !== this.status) {
+      this.status = status;
+      this.col = 0; // 换状态从第 0 帧起播
+      // 切换淡入：移除再加回 class，强制重触发 CSS 动画（styles 里定义 pet-fade-in）
+      const c = this.canvas;
+      c.classList.remove("switching");
+      void c.offsetWidth;
+      c.classList.add("switching");
+    }
   }
 
   start() {
+    if (this.raf) return; // 已在播放（宠物窗 hover 场景会反复 start/stop）
     const loop = (ts) => {
       if (this.atlas.complete && this.atlas.naturalWidth && this.manifest) {
         const st = this.manifest.states[this.status] || this.manifest.states.idle;
@@ -175,8 +185,14 @@ export class SpriteAnimator {
           this.canvas.height,
         );
       }
-      requestAnimationFrame(loop);
+      this.raf = requestAnimationFrame(loop);
     };
-    requestAnimationFrame(loop);
+    this.raf = requestAnimationFrame(loop);
+  }
+
+  /** 停止播放（预览卡 mouseleave 用）；停止前不重绘，调用方自行画回静态帧 */
+  stop() {
+    if (this.raf) cancelAnimationFrame(this.raf);
+    this.raf = null;
   }
 }

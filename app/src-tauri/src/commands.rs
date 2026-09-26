@@ -413,6 +413,55 @@ pub fn open_local_dir(dir: String) {
     let _ = std::process::Command::new("explorer").arg(&normalized).spawn();
 }
 
+// ---- 宠物包导入（phase-6）----
+
+/// 从选定文件夹导入宠物包：校验 atlas.png + pet.json，拷贝到 ~/.z-buddy/pets/<name>/
+/// （已存在同名外部包则覆盖 = 更新）。返回导入后的宠物名。
+#[tauri::command]
+pub fn import_pet_from_dir(source: String) -> Result<String, String> {
+    let src = std::path::PathBuf::from(&source);
+    let pet_json = src.join("pet.json");
+    let atlas = src.join("atlas.png");
+    if !pet_json.is_file() || !atlas.is_file() {
+        return Err("所选文件夹缺少 pet.json 或 atlas.png，不是有效的宠物包".into());
+    }
+    let manifest: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(&pet_json).map_err(|e| format!("读取 pet.json 失败: {e}"))?,
+    )
+    .map_err(|e| format!("pet.json 解析失败: {e}"))?;
+    let name = manifest
+        .get("name")
+        .and_then(|v| v.as_str())
+        .filter(|s| {
+            !s.is_empty()
+                && s.len() <= 64
+                && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        })
+        .ok_or("pet.json 缺少合法的 name 字段（仅限字母/数字/连字符/下划线）")?;
+    const BUNDLED: &[&str] = &["yoru", "mochi", "bsod", "fireball"];
+    if BUNDLED.contains(&name) {
+        return Err(format!("\"{name}\" 是内置宠物名，请在 pet.json 里换一个名字再导入"));
+    }
+    let dest = z_buddy_dir().join("pets").join(name);
+    copy_dir_all(&src, &dest).map_err(|e| format!("拷贝失败: {e}"))?;
+    Ok(name.to_string())
+}
+
+fn copy_dir_all(src: &std::path::Path, dest: &std::path::Path) -> std::io::Result<()> {
+    fs::create_dir_all(dest)?;
+    for e in fs::read_dir(src)? {
+        let e = e?;
+        let ty = e.file_type()?;
+        let to = dest.join(e.file_name());
+        if ty.is_dir() {
+            copy_dir_all(&e.path(), &to)?;
+        } else {
+            fs::copy(e.path(), to)?;
+        }
+    }
+    Ok(())
+}
+
 // ---- 宠物右键菜单 ----
 
 #[tauri::command]

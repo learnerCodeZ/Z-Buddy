@@ -72,6 +72,7 @@ pub fn run() {
         // 自动更新：检查/下载/安装（命令见 commands.rs 的 check_update / install_update）
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::read_state,
             commands::set_pause,
@@ -94,6 +95,7 @@ pub fn run() {
             commands::popup_pet_menu,
             commands::open_local_dir,
             commands::get_pets_dir,
+            commands::import_pet_from_dir,
             commands::get_pet_scale,
             commands::set_pet_scale,
             commands::save_pet_position,
