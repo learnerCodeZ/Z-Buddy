@@ -14,7 +14,7 @@ const sellingPoints = [
   {
     icon: '⏸️',
     title: '点一下就暂停',
-    desc: '点团子 = ZCode 停手，再点恢复。通过 hook 硬拦截实现，不是装饰按钮——人随时插队，AI 让位。',
+    desc: '点桌宠 = ZCode 停手，再点恢复。通过 hook 硬拦截实现，不是装饰按钮——人随时插队，AI 让位。',
   },
   {
     icon: '🧩',
@@ -33,15 +33,22 @@ const features = [
 ];
 
 const pets = [
+  {
+    name: '夜羽 Yoru',
+    badge: '官方默认伙伴',
+    desc: 'Z-Buddy 的门面担当：插画风格的黑发小鸟魔女，11 套动作全技能——敲键盘、摇审批牌、红灯闪、Zzz 气泡、长按拎起变黑天鹅。随应用内置，装好即有。',
+    img: 'pets/yoru-working.gif',
+    wide: true,
+  },
   { name: '团子 Mochi', desc: '第一只原创宠物，程序化生成，白团子本团。', img: 'pets/mochi-loop.webp' },
   { name: '抹茶 Matcha', desc: '一行换肤命令生成的绿色团子，外部宠物包加载实测员。', img: 'pets/matcha-loop.webp' },
 ];
 
 const phases = [
   { name: 'Phase 0 · 技术验证', status: 'done', desc: 'hooks 事件流、点按暂停闭环、打断自愈、Tauri 选型' },
-  { name: 'Phase 1 · MVP', status: 'doing', desc: '状态联动 / 悬浮暂停 / 托盘自启 / 宠物包加载 —— 已达成第一里程碑' },
-  { name: 'Phase 2 · 生态与可视化', status: 'todo', desc: 'hatch 生成宠物、GLM 对话气泡、电脑操作可视化、任务气泡' },
-  { name: 'Phase 3 · 护城河', status: 'todo', desc: '人机接力、审批桌面卡片、子代理多宠物、养成系统' },
+  { name: 'Phase 1 · MVP', status: 'done', desc: '状态联动 / 悬浮暂停 / 托盘自启 / 宠物包加载 / 自动更新 —— v0.1.0 已发布' },
+  { name: 'Phase 2 · 聚合与预警', status: 'doing', desc: '多会话聚合、电脑操作预警气泡、宠物包导入 —— 已完成待发版' },
+  { name: 'Phase 3 · 生态与护城河', status: 'todo', desc: '宠物包 UGC、GLM 对话气泡、人机接力、审批卡片' },
 ];
 
 const faqs = [
@@ -51,7 +58,7 @@ const faqs = [
   },
   {
     q: '收费吗？',
-    a: '免费且开源（MIT，发布前确定）。运行中唯一的可选成本是聊天功能调用 GLM API 的费用——用的是你自己配置的 Key，与本项目无关。',
+    a: '免费且开源（MIT，已定稿）。后续聊天功能（规划中）上线后，唯一的可选成本是聊天调用 GLM API 的费用——用的是你自己配置的 Key，与本项目无关。',
   },
   {
     q: '它会读我的代码、上传数据吗？',
@@ -83,6 +90,7 @@ const faqs = [
           </h1>
           <p class="mt-5 max-w-lg text-base leading-relaxed text-ink-2 sm:text-lg">
             一只挂在桌面角落的像素小宠物：ZCode 干活时它打字，出错时它冒汗，完成时它庆祝，深夜它会冒 Zzz 睡着。点它一下，随时让 AI 停一停。
+            默认伙伴 <span class="font-medium text-ink">夜羽</span> 随应用内置，更多宠物一个文件夹就能导入。
           </p>
           <div class="mt-8 flex flex-wrap items-center gap-3">
             <a class="btn-primary" href={releaseAsset(SITE.assets.setup)}>立即下载 Z-Buddy</a>
@@ -137,13 +145,18 @@ const faqs = [
   <section class="border-t border-hairline bg-elevated py-16 sm:py-20">
     <div class="mx-auto max-w-6xl px-4 sm:px-6">
       <h2 class="section-title">认识一下家里的宠物</h2>
-      <p class="section-sub">全部原创程序化生成，版权干净。想自己捏一只？<a class="text-zblue underline underline-offset-2" href={`${bp}/docs/faq/`}>看宠物包玩法</a>。</p>
+      <p class="section-sub">全部原创，版权干净。想自己捏一只？<a class="text-zblue underline underline-offset-2" href={`${bp}/docs/pet-pack-spec/`}>宠物包规范 v1 在这里</a>。</p>
       <div class="mt-10 grid gap-5 sm:grid-cols-2">
         {pets.map((p) => (
-          <div class="card flex items-center gap-6">
-            <img src={withBase(p.img)} alt={`${p.name} 循环动画`} class="pixelated h-28 w-28 shrink-0" width="112" height="112" />
+          <div class:list={['card flex items-center gap-6', p.wide && 'sm:col-span-2 flex-col sm:flex-row bg-card ring-1 ring-zblue/25']}>
+            <div class:list={['shrink-0', p.wide && 'relative']}>
+              <img src={withBase(p.img)} alt={`${p.name} 循环动画`} class:list={['pixelated', p.wide ? 'h-40 w-40' : 'h-28 w-28']} width={p.wide ? 160 : 112} height={p.wide ? 160 : 112} />
+            </div>
             <div>
-              <h3 class="text-lg font-semibold">{p.name}</h3>
+              <h3 class="flex flex-wrap items-center gap-2 text-lg font-semibold">
+                {p.name}
+                {p.badge && <span class="rounded-full bg-zblue/10 px-2.5 py-0.5 text-xs font-medium text-zblue">{p.badge}</span>}
+              </h3>
               <p class="mt-1.5 text-sm leading-relaxed text-ink-2">{p.desc}</p>
             </div>
           </div>
