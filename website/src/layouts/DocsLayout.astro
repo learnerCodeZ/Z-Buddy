@@ -25,6 +25,9 @@ const deepLinks = [
   { href: `${bp}/docs/architecture-privacy/`, label: '架构与隐私' },
   { href: `${bp}/docs/zcode-opensource/`, label: 'ZCode 开源的影响' },
 ];
+const friendLinks = [
+  { href: `${bp}/links/`, label: '友情链接' },
+];
 const soonItems: string[] = [];
 
 function active(href: string) {
@@ -76,6 +79,15 @@ function active(href: string) {
           </a>
         ))}
       </nav>
+      <p class="mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-ink-2/70">友情链接</p>
+      <nav class="space-y-0.5">
+        {friendLinks.map(l => (
+          <a href={l.href}
+             class:list={['block rounded-md px-3 py-1.5 text-sm transition-colors', l.href.startsWith('http') ? 'text-ink-2 hover:bg-soft hover:text-ink' : active(l.href) ? 'bg-zblue/10 font-medium text-zblue' : 'text-ink-2 hover:bg-soft hover:text-ink']}>
+            {l.label}
+          </a>
+        ))}
+      </nav>
       <p class="mt-6 border-t border-hairline pt-4 text-xs leading-5 text-ink-2">
         适用版本 v0.1.x<br />
         <a class="text-zblue underline underline-offset-2"
@@ -106,6 +118,15 @@ function active(href: string) {
             <a href={l.href}
                class:list={['block rounded-md px-3 py-1.5 text-sm',
                             active(l.href) ? 'bg-zblue/10 font-medium text-zblue' : 'text-ink-2 hover:bg-soft']}>
+              {l.label}
+            </a>
+          ))}
+        </nav>
+        <p class="mt-4 mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-ink-2/70">友情链接</p>
+        <nav class="space-y-0.5">
+          {friendLinks.map(l => (
+            <a href={l.href}
+               class:list={['block rounded-md px-3 py-1.5 text-sm', l.href.startsWith('http') ? 'text-ink-2 hover:bg-soft' : active(l.href) ? 'bg-zblue/10 font-medium text-zblue' : 'text-ink-2 hover:bg-soft']}>
               {l.label}
             </a>
           ))}
