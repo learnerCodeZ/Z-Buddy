@@ -17,7 +17,7 @@
         "en": "ZCode desktop pet bridge: agent lifecycle reporting + pet pause button.",
         "zh-CN": "ZCode 桌宠桥接：Agent 生命周期上报 + 点桌宠暂停。"
       },
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": {
         "name": "learnerCodeZ"
       }

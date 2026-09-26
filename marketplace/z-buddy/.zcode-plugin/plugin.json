@@ -5,9 +5,11 @@
     "en": "ZCode desktop pet bridge: reports agent lifecycle to the Z-Buddy pet app and enforces its pause button.",
     "zh-CN": "ZCode 桌宠桥接：把 Agent 生命周期上报给 Z-Buddy 桌宠应用，并支持点桌宠暂停 Agent。"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
-    "name": "learnerCodeZ"
+    "name": "learnerCodeZ",
+    "url": "https://github.com/learnerCodeZ"
   },
-  "keywords": ["desktop-pet", "hooks", "z-buddy", "official-template", "example-plugin-structure"]
+  "license": "MIT",
+  "keywords": ["desktop-pet", "hooks", "status", "pause", "computer-use", "z-buddy"]
 }
