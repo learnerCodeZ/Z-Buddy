@@ -207,6 +207,9 @@ node app/tools/gen_illustration_pet.mjs app/tools/source/<名>.png app/src/pets/
 #   这些矩形在镜像后按原方向贴回 ⇒ 鸭子反、字正。上面那串是夜羽的实测值
 #   （头顶 Z / Z 的卷尾 / 胸针心形里的 Z）；矩形只许覆盖字形，压到鸭子身上会留一块没镜像的补丁。
 
+# ⑤ 状态 GIF（推广物料）：atlas+pet.json → 各状态循环 GIF，改图集后重跑即可
+python app/tools/gen_pet_gifs.py app/src/pets/yoru docs/assets
+
 # ③ 手工：行 = 状态（idle/working/error/sleep[/drag_left/drag_right]），参考 src/pets/mochi/pet.json
 
 # ④ 多姿势宠物（夜羽专用构建器）：4 张姿势图（每张 3 个姿势：站/睡/思考）+ 旧立绘 + 天鹅
