@@ -32,16 +32,21 @@ const features = [
   { icon: '🔒', title: '隐私优先', desc: '状态数据只写本机 ~/.z-buddy/，不上传任何东西；聊天历史（规划中）也永不落盘。' },
 ];
 
-const pets = [
-  {
-    name: '夜羽 Yoru',
-    badge: '官方默认伙伴',
-    desc: 'Z-Buddy 的门面担当：插画风格的黑发小鸟魔女，11 套动作全技能——敲键盘、摇审批牌、红灯闪、Zzz 气泡、长按拎起变黑天鹅。随应用内置，装好即有。',
-    img: 'pets/yoru-working.gif',
-    wide: true,
-  },
-  { name: '团子 Mochi', desc: '第一只原创宠物，程序化生成，白团子本团。', img: 'pets/mochi-loop.webp' },
-  { name: '抹茶 Matcha', desc: '一行换肤命令生成的绿色团子，外部宠物包加载实测员。', img: 'pets/matcha-loop.webp' },
+const yoru = {
+  name: '夜羽 Yoru',
+  desc: 'Z-Buddy 的门面担当：插画风格的黑发小鸟魔女，随应用内置、装好即有。她会跟着 Agent 的状态换 11 套动作，长按拎起来还会变成黑天鹅——下面就是她的日常。',
+  img: 'pets/yoru-working.gif',
+};
+
+const yoruForms = [
+  { label: '待机', img: 'pets/yoru-idle.gif' },
+  { label: '干活', img: 'pets/yoru-working.gif' },
+  { label: '思考', img: 'pets/yoru-thinking.gif' },
+  { label: '等审批', img: 'pets/yoru-permission.gif' },
+  { label: '出错', img: 'pets/yoru-error.gif' },
+  { label: '睡觉', img: 'pets/yoru-sleep.gif' },
+  { label: '暂停', img: 'pets/yoru-paused.gif' },
+  { label: '黑天鹅（拖动）', img: 'pets/yoru-swan.png' },
 ];
 
 const phases = [
@@ -145,20 +150,19 @@ const faqs = [
   <section class="border-t border-hairline bg-elevated py-16 sm:py-20">
     <div class="mx-auto max-w-6xl px-4 sm:px-6">
       <h2 class="section-title">认识一下家里的宠物</h2>
-      <p class="section-sub">全部原创，版权干净。想自己捏一只？<a class="text-zblue underline underline-offset-2" href={`${bp}/docs/pet-pack-spec/`}>宠物包规范 v1 在这里</a>。</p>
-      <div class="mt-10 grid gap-5 sm:grid-cols-2">
-        {pets.map((p) => (
-          <div class:list={['card flex items-center gap-6', p.wide && 'sm:col-span-2 flex-col sm:flex-row bg-card ring-1 ring-zblue/25']}>
-            <div class:list={['shrink-0', p.wide && 'relative']}>
-              <img src={withBase(p.img)} alt={`${p.name} 循环动画`} class:list={['pixelated', p.wide ? 'h-40 w-40' : 'h-28 w-28']} width={p.wide ? 160 : 112} height={p.wide ? 160 : 112} />
-            </div>
-            <div>
-              <h3 class="flex flex-wrap items-center gap-2 text-lg font-semibold">
-                {p.name}
-                {p.badge && <span class="rounded-full bg-zblue/10 px-2.5 py-0.5 text-xs font-medium text-zblue">{p.badge}</span>}
-              </h3>
-              <p class="mt-1.5 text-sm leading-relaxed text-ink-2">{p.desc}</p>
-            </div>
+      <p class="section-sub">原创角色，版权干净。想自己捏一只？<a class="text-zblue underline underline-offset-2" href={`${bp}/docs/pet-pack-spec/`}>宠物包规范 v1 在这里</a>。</p>
+      <div class="card mt-10 flex flex-col items-center gap-6 bg-card p-6 ring-1 ring-zblue/25 sm:flex-row sm:p-8">
+        <img src={withBase(yoru.img)} alt="夜羽工作中的循环动画" class="pixelated h-40 w-40 shrink-0" width="160" height="160" />
+        <div>
+          <h3 class="text-xl font-semibold">{yoru.name}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-ink-2">{yoru.desc}</p>
+        </div>
+      </div>
+      <div class="mt-5 grid grid-cols-4 gap-3 lg:grid-cols-8">
+        {yoruForms.map((f) => (
+          <div class="rounded-xl border border-hairline bg-card p-3 text-center transition-shadow hover:shadow-md">
+            <img src={withBase(f.img)} alt={`夜羽${f.label}形象`} class="pixelated mx-auto h-24 w-24" width="96" height="96" loading="lazy" />
+            <p class="mt-2 truncate text-xs text-ink-2">{f.label}</p>
           </div>
         ))}
       </div>
